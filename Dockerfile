@@ -7,11 +7,16 @@ RUN go mod download
 
 COPY . .
 
-RUN case "$TARGETARCH" in \
-      amd64) cp ./license/license_amd64 ./license ;; \
-      arm64) cp ./license/license_arm64 ./license ;; \
-      arm)   cp ./license/license_armv7 ./license ;; \
-      *) echo "未知架构: $TARGETARCH" && exit 1 ;; \
+# 打印调试信息（第一次构建建议保留，确认后可删）
+RUN echo "TARGETARCH=$TARGETARCH TARGETVARIANT=$TARGETVARIANT TARGETPLATFORM=$TARGETPLATFORM"
+
+# 根据架构复制对应 license 文件
+RUN case "$TARGETARCH/$TARGETVARIANT" in \
+      amd64/*) cp ./license/license_amd64 ./license ;; \
+      arm64/*) cp ./license/license_arm64 ./license ;; \
+      arm/v7)  cp ./license/license_armv7 ./license ;; \
+      arm/*)   cp ./license/license_armv7 ./license ;; \
+      *) echo "未知架构: $TARGETARCH/$TARGETVARIANT" && exit 1 ;; \
     esac
 
 RUN  go build -o iptv main.go
@@ -36,10 +41,10 @@ COPY ./README.md  /app/README.md
 COPY ./logo /app/logo
 COPY ./ChangeLog.md /app/ChangeLog.md
 COPY ./Version /app/Version
-COPY ./license /app/license
 
 RUN chmod 777 -R /usr/bin/apktool* 
 
 COPY --from=builder /app/iptv .
+COPY --from=builder /app/license .
 
 CMD ["./iptv"]
