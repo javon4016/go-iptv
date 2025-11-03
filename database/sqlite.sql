@@ -38,6 +38,7 @@ CREATE TABLE iptv_channels (
     name TEXT NOT NULL,
     url TEXT DEFAULT NULL,
     sort INTEGER,
+    resolution TEXT,
     status INTEGER NOT NULL DEFAULT 1,
     e_id INTEGER DEFAULT 0,
     c_id INTEGER DEFAULT 0,
