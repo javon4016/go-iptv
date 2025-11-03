@@ -456,8 +456,13 @@ func AddChannelList(srclist string, cId, listId int64, doRepeat bool) (int, erro
 				return err
 			}
 		}
-		if len(newChannels) > 0 {
-			if err := tx.Create(&newChannels).Error; err != nil {
+		batchSize := 50
+		for i := 0; i < len(newChannels); i += batchSize {
+			end := i + batchSize
+			if end > len(newChannels) {
+				end = len(newChannels)
+			}
+			if err := tx.Create(newChannels[i:end]).Error; err != nil {
 				return err
 			}
 		}

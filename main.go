@@ -56,7 +56,9 @@ func main() {
 		return
 	}
 
-	bootstrap.InitLicense() // 初始化授权信息
+	if os.Getenv("IPTVDEV") != "true" {
+		bootstrap.InitLicense() // 初始化授权信息
+	}
 
 	if !until.Exists("/config/iptv.db") || !until.Exists("/config/config.yml") || !until.Exists("/config/install.lock") {
 		bootstrap.Installed = false

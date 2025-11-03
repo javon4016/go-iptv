@@ -157,4 +157,5 @@ func initIptvChannel() {
 	}
 
 	dao.DB.AutoMigrate(&models.IptvChannel{})
+	dao.DB.Model(&models.IptvChannel{}).Delete(&models.IptvCategory{}, "c_id = 0")
 }

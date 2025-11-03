@@ -104,9 +104,9 @@ func AddList(params url.Values) dto.ReturnJsonDto {
 
 	if clId == "" {
 		var category models.IptvCategoryList
-		dao.DB.Model(&models.IptvCategoryList{}).Where("name = ? or url = ?", listName, url).Find(&category)
+		dao.DB.Model(&models.IptvCategoryList{}).Where("name = ?", listName).Find(&category)
 		if category.Name != "" {
-			return dto.ReturnJsonDto{Code: 0, Msg: "该列表名称或url已存在", Type: "danger"}
+			return dto.ReturnJsonDto{Code: 0, Msg: "该列表名称存在", Type: "danger"}
 		}
 	} else {
 		id, err := strconv.ParseInt(clId, 10, 64)
