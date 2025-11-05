@@ -199,7 +199,7 @@ func GetAutoChannelList(category models.IptvCategory) []models.IptvChannelShow {
 	var channelList []models.IptvChannelShow
 	if err := dao.DB.Table(models.IptvChannelShow{}.TableName() + " AS c").
 		Select("c.*, e.name AS epg_name").
-		Joins("LEFT JOIN " + models.IptvEpg{}.TableName() + " AS e ON c.e_id = e.id AND e.status = 1").
+		Joins("INNER JOIN " + models.IptvEpg{}.TableName() + " AS e ON c.e_id = e.id AND e.status = 1").
 		Where("c.e_id != 0 and c.status = 1").
 		Order("c_id,sort asc").
 		Find(&channelList).Error; err != nil {

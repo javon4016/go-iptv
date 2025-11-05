@@ -103,7 +103,7 @@
                     </div>
                     <div class="col-lg-6">
                         <div class="card">
-                            <div class="card-header"><h4>分辨率识别</h4>
+                            <div class="card-header"><h4>分辨率&&延迟测试</h4>
                             {{ if eq .Lic.Tpye 0 }} <span class="badge badge-danger">未授权</span>{{ end }}
                             </div>
                             <div class="card-body" {{ if eq .Lic.Tpye 0 }}style="pointer-events: none; opacity: 0.6;"{{ end }}>
@@ -116,17 +116,17 @@
                                             <span></span>
                                         </label>
                                     </div>
-                                    <small class="help-block">提示：源更新时自动测试分辨率，CPU、内存占用较大，谨慎开启！！！可以手动单条测试分辨率</small>
+                                    <small class="help-block">提示：源更新时自动测试分辨率和延迟，CPU、内存占用较大，谨慎开启！！！可以手动单条测试分辨率</small>
                                 </div>
                                 <div class="form-inline">
                                     <div class="form-group" style="margin-right: 15px;">
-                                        <label>未识别频道自动禁用:</label>
+                                        <label>自动禁用:</label>
                                         <label class="lyear-switch switch-primary">
                                             <input type="checkbox" name="disCh" onchange="submitFormPOST(this)" {{if eq .DisCh 1}}checked{{end}}/>
                                             <span></span>
                                         </label>
                                     </div>
-                                    <small class="help-block">提示：无法识别分辨率时自动禁用频道</small>
+                                    <small class="help-block">提示：无法识别分辨率时或访问失败自动禁用频道，若源有UA或其他要求，请谨慎开启</small>
                                 </div>
                                 </form>
                             </div>
