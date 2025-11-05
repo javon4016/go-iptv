@@ -129,9 +129,10 @@ func doRebuild(ctx context.Context) {
 					res, _ = dao.WS.SendWS(dao.Request{Action: "getTestStatus"}) //获取测试状态
 				}
 				log.Println("分辨率测试完成")
+				log.Println("🚀 重新执行EPG缓存重建")
 				dao.Cache.Clear() //清除缓存
 				makeMealsXmlCacheAll()
-				log.Println("🚀 重新执行EPG缓存重建")
+				log.Println("✅ EPG缓存重建任务执行完成")
 			}
 		}
 	}
