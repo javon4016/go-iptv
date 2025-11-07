@@ -16,7 +16,6 @@ RUN if [ "$TARGETARCH" = "arm" ]; then \
     else \
         if [ "$TARGETARCH" = "amd64" ]; then \
             echo "编译 amd64"; \
-            GOOS=linux GOARCH=amd64 go build -o iptv main.go ; \
         else \
             echo "交叉编译 arm64"; \
         fi \
