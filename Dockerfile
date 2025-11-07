@@ -17,7 +17,13 @@ RUN case "$TARGETARCH" in \
       *) echo "未知架构: $TARGETARCH" && exit 1 ;; \
     esac
 
-RUN  go build -o iptv main.go
+# 根据架构交叉编译
+RUN if [ "$TARGETARCH" = "arm" ]; then \
+        GOOS=linux GOARCH=arm GOARM=7 go build -o iptv main.go ; \
+    else \
+        GOOS=linux GOARCH=$TARGETARCH go build -o iptv main.go ; \
+    fi
+
 RUN chmod +x /app/iptv
 
 FROM alpine:latest

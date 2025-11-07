@@ -190,7 +190,7 @@ func GetAutoChannelList(category models.IptvCategory) []models.IptvChannelShow {
 
 	autoCaCheKey := "autoCategory_" + strconv.FormatInt(category.ID, 10)
 	if dao.Cache.Exists(autoCaCheKey) {
-		err := dao.Cache.GetStruct(autoCaCheKey, result)
+		err := dao.Cache.GetStruct(autoCaCheKey, &result)
 		if err == nil {
 			return result
 		}

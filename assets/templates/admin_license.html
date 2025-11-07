@@ -68,19 +68,19 @@
                 <div class="row">
                     <div class="col-lg-6">
                         <div class="card">
-                            <div class="card-header"><h4>代理</h4>
+                            <div class="card-header"><h4>中转访问</h4>
                             {{ if eq .Lic.Tpye 0 }} <span class="badge badge-danger">未授权</span>{{ end }}
                             </div>
                             <div class="card-body" {{ if eq .Lic.Tpye 0 }}style="pointer-events: none; opacity: 0.6;"{{ end }}>
                                 <form method="post" action="/admin/license">
                                 <div class="input-group"> 
-                                    <label>代理地址:</label>&nbsp;&nbsp;<button class="btn btn-label btn-danger" type="button" id="lockBtn" onclick="proxyLock(this)"
+                                    <label>中转地址:</label>&nbsp;&nbsp;<button class="btn btn-label btn-danger" type="button" id="lockBtn" onclick="proxyLock(this)"
                                         style=" display:inline-flex; align-items:center; justify-content:center; padding:4px 8px;" {{ if eq .Proxy 1 }}disabled{{ end }}>
                                         <i class="mdi mdi-lock" style="margin:0; padding:0; vertical-align:middle;"></i>
                                     </button>
                                     <div class="input-group">
-                                        <div><input class="form-control" type="text" id="pAddr" name="pAddr" value="{{ .ProxyAddr }}" style="margin-top: 15px;" placeholder="源代理的地址"  readonly></div>
-                                        <small class="help-block">提示：源代理的地址，当后台和源代理使用不同域名或ip时，请手动修改这个地址</small>
+                                        <div><input class="form-control" type="text" id="pAddr" name="pAddr" value="{{ .ProxyAddr }}" style="margin-top: 15px;" placeholder="源中转的地址"  readonly></div>
+                                        <small class="help-block">提示：源中转的地址，当后台和源中转使用不同域名或ip时，请手动修改这个地址</small>
                                     </div>
                                 </div>
                                 <div class="form-inline">
@@ -89,7 +89,7 @@
                                         <input class="form-control" type="number" name="port" value="{{ .Port }}" placeholder="82-65535之间" min="82" max="65535" step="1" {{ if eq .Proxy 1 }}disabled{{ end }}>
                                     </div>
                                     <div class="form-group" style="margin-right: 15px;">
-                                        <label>开启代理:</label>
+                                        <label>开启中转:</label>
                                         <label class="lyear-switch switch-primary">
                                             <input type="checkbox" name="proxy" onchange="submitFormPOST(this)" {{if eq .Proxy 1}}checked{{end}}/>
                                             <span></span>
