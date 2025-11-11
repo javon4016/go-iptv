@@ -84,7 +84,7 @@ type Program struct {
 	StartTime string `json:"starttime"`
 }
 
-type Response struct {
+type ApkResponse struct {
 	Code int       `json:"code"`
 	Data []Program `json:"data"`
 	Msg  string    `json:"msg"`

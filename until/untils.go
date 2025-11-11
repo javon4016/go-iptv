@@ -72,6 +72,7 @@ func GetUrlData(url string, ua ...string) string {
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
+		log.Println("err1", err)
 		return ""
 	}
 
@@ -80,12 +81,14 @@ func GetUrlData(url string, ua ...string) string {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
+		log.Println("err2", err)
 		return ""
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
+		log.Println("err3", err)
 		return ""
 	}
 
@@ -467,10 +470,9 @@ func EpgNameGetLogo(eNmae string) string {
 		pngs[i] = filepath.Base(file)
 	}
 
-	epgName := strings.SplitN(eNmae, "-", 2)[1]
 	for _, logo := range pngs {
 		logoName := strings.Split(logo, ".")[0]
-		if strings.EqualFold(epgName, logoName) {
+		if strings.EqualFold(eNmae, logoName) {
 			return "/logo/" + logo
 		}
 	}
@@ -575,6 +577,22 @@ func EqualStringSets(a, b []string) bool {
 		}
 	}
 	return true
+}
+
+func RemoveEmptyStrings(slice []string) []string {
+	result := make([]string, 0, len(slice))
+	seen := make(map[string]struct{})
+
+	for _, s := range slice {
+		s = strings.TrimSpace(s)
+		if s != "" {
+			if _, exists := seen[s]; !exists {
+				result = append(result, s)
+				seen[s] = struct{}{}
+			}
+		}
+	}
+	return result
 }
 
 func Int64InStringSlice(target int64, list []string) bool {

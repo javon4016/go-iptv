@@ -111,7 +111,7 @@ func Proxy(params url.Values) dto.ReturnJsonDto {
 }
 
 func ResEng() dto.ReturnJsonDto {
-	if dao.WS.RestartLic() {
+	if dao.RestartLic() {
 		return dto.ReturnJsonDto{Code: 1, Msg: "重启成功", Type: "success"}
 	}
 	return dto.ReturnJsonDto{Code: 0, Msg: "重启失败", Type: "danger"}

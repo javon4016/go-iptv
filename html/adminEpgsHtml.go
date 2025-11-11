@@ -1,6 +1,7 @@
 package html
 
 import (
+	"fmt"
 	"go-iptv/dao"
 	"go-iptv/dto"
 	"go-iptv/models"
@@ -86,30 +87,31 @@ func Epgs(c *gin.Context) {
 		log.Println("查询epg失败:", err)
 	}
 
+	dao.DB.Model(&models.IptvEpgList{}).Find(&pageData.EpgFromDb)
+	dao.DB.Model(&models.IptvCategory{}).Find(&pageData.CaList)
+
 	logoList := until.GetLogos() // 获取logo列表
 
 	for k, v := range pageData.Epgs {
-		epgName := strings.SplitN(v.Name, "-", 2)[1]
 		for _, logo := range logoList {
 			logoName := strings.Split(logo, ".")[0]
-			if strings.EqualFold(epgName, logoName) {
+			if strings.EqualFold(v.Name, logoName) {
 				pageData.Epgs[k].Logo = "/logo/" + logo
 			}
 		}
+		for _, a := range strings.Split(v.FromListStr, ",") {
+			if a == "0" {
+				pageData.Epgs[k].FromName += "CCTV官网,"
+				continue
+			}
+			for _, b := range pageData.EpgFromDb {
+				if a == fmt.Sprintf("%d", b.ID) {
+					pageData.Epgs[k].FromName += b.Name + ","
+				}
+			}
+		}
+		pageData.Epgs[k].FromName = strings.TrimRight(pageData.Epgs[k].FromName, ",")
 	}
-
-	var epgList []models.IptvEpgList
-	dao.DB.Model(&models.IptvEpgList{}).Find(&epgList)
-	pageData.EpgFromDb = epgList
-	pageData.EpgFromList = make(map[string]string)
-	for _, v := range epgList {
-		pageData.EpgFromList[v.Remarks] = v.Name
-	}
-
-	// cfg := dao.GetConfig()
-
-	// pageData.EpgErr = cfg.EPGErrors
-	// pageData.EPGApiChk = cfg.App.EPGApiChk
 
 	c.HTML(200, "admin_epgs.html", pageData)
 }
@@ -125,12 +127,11 @@ func EpgsFrom(c *gin.Context) {
 		Title:     "EPG源管理",
 	}
 
-	var epgList []models.IptvEpgList
-	dao.DB.Model(&models.IptvEpgList{}).Find(&epgList)
-	pageData.EpgFromDb = epgList
+	dao.DB.Model(&models.IptvEpgList{}).Find(&pageData.EpgFromDb)
+
 	pageData.EpgFromList = make(map[string]string)
-	for k, v := range epgList {
-		epgList[k].LastTimeStr = time.Unix(v.LastTime, 0).Format("2006-01-02 15:04:05")
+	for k, v := range pageData.EpgFromDb {
+		pageData.EpgFromDb[k].LastTimeStr = time.Unix(v.LastTime, 0).Format("2006-01-02 15:04:05")
 		pageData.EpgFromList[v.Name] = v.Remarks
 	}
 

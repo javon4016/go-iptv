@@ -22,34 +22,35 @@ func License(c *gin.Context) {
 		Title:     "进阶功能",
 	}
 
-	res, err := dao.WS.SendWS(dao.Request{Action: "reloadLic"})
-	if err == nil {
-		if err := json.Unmarshal(res.Data, &dao.Lic); err != nil {
-			log.Println("license信息解析错误:", err)
+	if dao.WS.IsOnline() {
+		pageData.Online = 1
+		res, err := dao.WS.SendWS(dao.Request{Action: "reloadLic"})
+		if err == nil {
+			if err := json.Unmarshal(res.Data, &dao.Lic); err != nil {
+				log.Println("license信息解析错误:", err)
+			}
 		}
+		verJson, err := dao.WS.SendWS(dao.Request{Action: "getVersion"})
+		if err == nil {
+			if err := json.Unmarshal(verJson.Data, &pageData.Version); err != nil {
+				log.Println("版本信息解析错误:", err)
+			}
+		}
+		cfg := dao.GetConfig()
+		pageData.Proxy = cfg.Proxy.Status
+		pageData.ProxyAddr = cfg.Proxy.PAddr
+
+		pageData.Port = cfg.Proxy.Port
+		pageData.AutoRes = cfg.Resolution.Auto
+		pageData.DisCh = cfg.Resolution.DisCh
+		pageData.Lic.ExpStr = time.Unix(pageData.Lic.Exp, 0).Format("2006-01-02 15:04:05")
 	}
 
-	cfg := dao.GetConfig()
-	pageData.Proxy = cfg.Proxy.Status
-	pageData.ProxyAddr = cfg.Proxy.PAddr
-	pageData.Lic = dao.Lic
-	pageData.Port = cfg.Proxy.Port
-	pageData.AutoRes = cfg.Resolution.Auto
-	pageData.DisCh = cfg.Resolution.DisCh
-	pageData.Lic.ExpStr = time.Unix(pageData.Lic.Exp, 0).Format("2006-01-02 15:04:05")
 	if dao.IsRunning() {
 		pageData.Status = 1
 	}
-	if dao.WS.IsOnline() {
-		pageData.Online = 1
-	}
 
-	verJson, err := dao.WS.SendWS(dao.Request{Action: "getVersion"})
-	if err == nil {
-		if err := json.Unmarshal(verJson.Data, &pageData.Version); err != nil {
-			log.Println("版本信息解析错误:", err)
-		}
-	}
+	pageData.Lic = dao.Lic
 
 	c.HTML(200, "admin_license.html", pageData)
 }

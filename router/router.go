@@ -47,7 +47,6 @@ func InitRouter(debug bool) *gin.Engine {
 		"Author":   func() int64 { return dao.GetConfig().App.NeedAuthor },
 		"Add":      func(a, b int64) int64 { return a + b },
 		"Sub":      func(a, b int64) int64 { return a - b },
-		"Prefix":   func(name string) string { return strings.SplitN(name, "-", 2)[0] },
 	})
 
 	r.Static("/app", "./app")
@@ -227,7 +226,6 @@ func loadTemplates(r *gin.Engine) {
 			"Author":   func() int64 { return dao.GetConfig().App.NeedAuthor },
 			"Add":      func(a, b int64) int64 { return a + b },
 			"Sub":      func(a, b int64) int64 { return a - b },
-			"Prefix":   func(name string) string { return strings.SplitN(name, "-", 2)[0] },
 		})
 		tmpl = template.Must(tmpl.ParseFS(assets.EmbeddedFS, "templates/*"))
 		staticFiles, _ := fs.Sub(assets.StaticFS, "static")

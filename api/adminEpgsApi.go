@@ -21,13 +21,13 @@ func Epgs(c *gin.Context) {
 	for k := range params {
 		switch k {
 		case "bdingepg":
-			res = service.GetEpgData(params)
-		case "edit_save_epg":
-			res = service.SaveEpg(params, 1)
-		case "add_save_epg":
-			res = service.SaveEpg(params, 0)
+			res = service.GetChName(params)
+		case "epgGetCa":
+			res = service.GetCa(params)
+		case "save_epg":
+			res = service.SaveEpg(params)
 		case "bding_save_epg":
-			res = service.SaveEpg(params, 2)
+			res = service.BdingEpg(params)
 		case "change_status":
 			res = service.ChangeStatus(params)
 		case "delepg":

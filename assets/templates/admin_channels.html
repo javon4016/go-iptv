@@ -339,12 +339,7 @@
 
 												<div class="form-group">
 													<label>EPG：</label>
-													<select class="form-control selectpicker" id="e_id" name="e_id" onchange="getLogo()" data-live-search="true" data-none-results-text="未找到匹配项" style="--max-height:300px;">
-													<option value="0"data-value="">无</option>
-													{{ range .Epgs }}
-													<option value="{{.ID}}" data-value="{{ .Logo }}">{{.Name}}</option>
-													{{end}}
-													</select>
+													<div id="e_id"></div>
 												</div>
 												<div style="display: flex; align-items: center; gap: 10px;">
 													<label>台标:</label>
@@ -392,4 +387,45 @@
 	}
 	</style>
 </main>
+
+<script>
+var chEpg = xmSelect.render({
+	el: '#e_id', 
+	name: 'e_id',
+	radio: true,
+	autoRow: true,
+	tips: '选择绑定epg', 
+	filterable: true,
+	clickClose: true,
+	paging: true,
+	pageSize: 5,
+	toolbar: {show: true, list: [ 'CLEAR']},
+	direction: 'down',
+	data: [
+		{{ range .Epgs }}
+		{name: '{{.Name}}', value: {{.ID}}, logo: '{{.Logo}}'},
+		{{end}}
+	],
+	on: function (data) {
+        if (data.isAdd) {
+            // 选中时
+            data.change.forEach(function (item) {
+                if (item.logo) {
+					$("#logoContainerEdit").show().find("img").attr("src", item.logo);
+				} else {
+					$("#logoContainerEdit").hide().find("img").attr("src", "");
+				}
+            });
+        } else {
+            // 取消选中时
+            data.change.forEach(function (item) {
+				$("#logoContainerEdit").hide().find("img").attr("src", "");
+            });
+        }
+    }
+})
+
+
+</script>
+
 {{ template "admin_footer" . }}

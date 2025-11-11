@@ -42,7 +42,7 @@
 											<td colspan="7">
 												<form action="/admin/epgsList" method="POST">
 													<label class="control-label">操作：</label>
-													<button class="btn btn-default" type="button" data-toggle="modal" data-target="#addepg">增加EPG</button>
+													<button class="btn btn-default" type="button" data-toggle="modal" data-target="#editepg">增加EPG</button>
 													<button class="btn btn-default" type="button" onclick="submitFormPOST(this)" name="bindchannel">自动绑定频道</button>
 													<button class="btn btn-default" type="button" onclick="confirmAndSubmit(this,'确定要清空绑定的频道列表吗？ 手动绑定将会失效不会自动添加！')" name="clearbind">清空绑定</button>
 													<button class="btn btn-default" type="button" name="clearcache" onclick="confirmAndSubmit(this,'确定要清空EPG缓存吗？')">清空EPG缓存</button>
@@ -53,30 +53,26 @@
 										<table class="table table-hover table-vcenter">
 										<tr align="center">
 											<!-- <td class="w-5">#</td> -->
-											<td class="w-5">来源-EPG名称</td>
-											<td class="w-10">自动绑定规则</td>
-											<td class="w-1">来源</td>
-											<td class="w-1">状态</td>
+											<td class="w-5">EPG名称</td>
+											<td class="w-10">来源</td>
+											<td class="w-5">状态</td>
 											<td class="w-5">logo</td>
 											<td class="w-10">绑定频道</td>
-											<td class="w-10">操作</td>
+											<td class="w-5">操作</td>
 										</tr>
 										<tbody style="font-size:12px;font-weight: bold;">
                                         {{ if gt (len .Epgs) 0 }}
                                         {{range .Epgs}}
                                         <tr data-name="{{.Name}}">    
                                             <td align="center" class="epg-id" data-value="{{.ID}}" style="display:none;">{{.ID}}</td>
+											<td align="center" class="epg-cas" data-value="{{.CasStr}}" style="display:none;">{{.CasStr}}</td>
                                             <td align="center" class="epg-name" data-value="{{.Name}}">{{.Name}}</td>
-                                            <td align="center" class="epg-remarks" data-value="{{.Remarks}}"><font color="red">{{.Remarks}}</font></td>
-                                            <td align="center"><font color="red">{{ if eq (Prefix .Name) "cntv" }}
-																					CCTV官网
-																				{{ else }}
-																					{{ index $.EpgFromList (Prefix .Name) }}
-																				{{ end }}</font></td>
+                                            <td align="center" class="epg-remarks" data-value="{{.Remarks}}" style="display:none;">{{.Remarks}}</td>
+                                            <td align="center" class="epg-from" data-value="{{.FromListStr}}">{{.FromName}}</td>
                                             <td align="center">{{ if eq .Status 1 }}<font color="#33a996">上线</font>{{else}}<font color="red">下线</font>{{end}}</td>
 											<td align="center">
 												 <div id="logo_{{ .ID }}" style="position:relative; {{if eq .Logo ""}}display:none;{{end}}">
-													<img id="logoImg" src="{{ .Logo }}" alt="预览" style="background-color: black;height:38px; border:1px solid #ccc; border-radius:4px; cursor:pointer;">
+													<img id="logoImg" src="{{ .Logo }}" alt="预览" style="background-color: black;height:26px; border:1px solid #ccc; border-radius:4px; cursor:pointer;">
 													<!-- 删除按钮 -->
 													<span id="deleteIconView" onclick="deleteLogo('{{ .ID }}')" data-name="{{ .ID }}" id="{{ .ID }}" style="
 														position:absolute; top:-8px; right:-8px;
@@ -86,9 +82,10 @@
 												</div>
 											</td>
                                             <td align="left">{{.Content}}</td>
-                                            <td align="left">
-                                                <button type="button" onclick="tdBtnPOST(this)" name="change_status" value="{{.ID}}" class="btn btn-xs {{if eq .Status 1 }}btn-warning">下线{{else}}btn-success">上线{{end}}</button>&nbsp;
-                                                <button class="btn btn-xs btn-info" type="button" value="{{.ID}}" data-toggle="modal" onclick="epgEdit(this)" data-target="#editepg">编辑</button>&nbsp;
+                                            <td align="center">
+												<div style="display: inline-flex; flex-wrap: nowrap;">
+													<button type="button" onclick="tdBtnPOST(this)" name="change_status" value="{{.ID}}" class="btn btn-xs {{if eq .Status 1 }}btn-warning">下线{{else}}btn-success">上线{{end}}</button>&nbsp;
+                                                <button class="btn btn-xs btn-info" type="button" value="{{.ID}}" name="epgGetCa" data-toggle="modal" onclick="epgEdit(this)" data-target="#editepg">编辑</button>&nbsp;
 												<button class="btn btn-xs btn-info" type="button" name="bdingepg" value="{{.ID}}" data-toggle="modal" onclick="epgsGetChannel(this)" data-target="#bdingepg">手动绑定</button>&nbsp;
 												<label class="btn btn-xs btn-info" style="margin:0;">
 													<span>上传logo</span>
@@ -97,85 +94,47 @@
 												{{ if gt .ID 18 }}
                                                 <button class="btn btn-xs btn-danger" type="button" onclick="tdBtnPOST(this)" name="delepg" value="{{.ID}}">删除</button>
 												{{ end }}
+												</div>
                                             </td>
                                         </tr>
                                         {{end}}
                                         {{ end }}
 										</tbody>
 									</table>
-									<div class="modal fade" id="addepg" tabindex="-1" role="dialog">
-										<div class="modal-dialog" role="document">
-											<div class="modal-content">
-												<div class="modal-header">
-													<button type="button" class="close" data-dismiss="modal" aria-label="Close" onclick="$('#name').val('');$('#remarks').val('');$('#epg').val('');"><span aria-hidden="true">&times;</span></button>
-													<h4 class="modal-title">增加EPG</h4>
-												</div>
-												<form method="post">
-													<div class="modal-body">
-														<div class="form-group">
-															<label class="control-label">名称：</label>
-															<input type="text" class="form-control" id="name" name="name" placeholder="请输入名称">
-														</div>
-														<div class="form-group">
-															<label class="control-label">自动绑定规则：</label>
-															<input type="text" class="form-control" name="remarks" name="remarks" placeholder="多个自动绑定规则请用 | 分隔开">
-														</div>
-														<div class="form-group">
-															<label class="control-label">EPG来源：</label>
-															<select class="form-control btn btn-default dropdown-toggle" id="epg" name="epg">
-																<option value="">请选EPG来源</option>
-																<option value="cntv">CCTV官网</option>
-																{{ if gt (len .EpgFromList) 0 }}{{ range $key, $value := .EpgFromList }}
-																<option value="{{ $key }}">{{ $value }}</option>
-																{{ end }}{{ end }}
-															</select>
-														</div>
-													</div>
-													<div class="modal-footer">
-														<button class="btn btn-primary" type="button" name="add_save_epg" onclick="submitFormPOST(this)" >新增</button>
-														<button type="button" class="btn btn-default" data-dismiss="modal" onclick="$('#name').val('');$('#remarks').val('');$('#epg').val('');">关闭</button>
-													</div>
-												</form>
-											</div>
-										</div>
-									</div>
                                     <div class="modal fade" id="editepg" tabindex="-1" role="dialog">
 										<div class="modal-dialog modal-lg" role="document">
 											<div class="modal-content">
 												<div class="modal-header">
-													<button type="button" class="close" data-dismiss="modal" aria-label="Close" onclick="$('#epgId').val('');$('#epgName').val('');$('#epgRemarks').val('');$('#editepgselect').val('');"><span aria-hidden="true">&times;</span></button>
+													<button type="button" class="close" data-dismiss="modal" aria-label="Close" onclick="$('#epgId').val('');$('#epgName').val('');$('#epgRemarks').val('');epgCaSelect.setValue([ ]);epgFrom.setValue([ ]);"><span aria-hidden="true">&times;</span></button>
 													<h4 class="modal-title">编辑EPG</h4>
 												</div>
 												<form method="post" action="/admin/epgsList">
 													<div class="modal-body">
-														<table class="table table-bordered table-striped table-vcenter" align="center">
-                                                            <tr>
-                                                                <td>
-                                                                    <div class="input-group">
-                                                                        <div class="input-group-btn">
-																			<input type="hidden" id="epgId" name="epgId" style="width: 0px;" value="">
-                                                                            <select class="form-control btn btn-default dropdown-toggle" style="width: 150px;" id="editepgselect" name="epg" >
-                                                                                <option value="">请选EPG来源</option>
-                                                                                <option value="cntv">CCTV官网</option>
-                                                                                {{ if gt (len .EpgFromList) 0 }}{{ range $key, $value := .EpgFromList }}
-																				<option value="{{ $key }}">{{ $value }}</option>
-																				{{ end }}{{ end }}
-                                                                            </select>&nbsp;&nbsp;
-                                                                            <input class="form-control" type="text" id="epgName" name="name" style="width: 125px;" placeholder="EPG名称" value="">
-                                                                        </div>
-                                                                    </div>
-																	<div class="input-inline" style="margin-top: 10px;">
-																		<label class="control-label">自动绑定规则:</label>
-                                                                        <textarea class="form-control" rows="5" id="epgRemarks" name="epgRemarks" placeholder="多个自动绑定规则匹配请用 | 分隔开" ></textarea>
-																		<small class="help-block">提示：多个自动绑定规则匹配请用 | 分隔开</small>
-                                                                    </div>
-                                                                </td>
-                                                            </tr>
-                                                        </table>
+														<div class="form-inline">
+															<div class="form-group">
+																<label class="control-label">EPG名称:</label>
+																<input type="hidden" id="epgId" name="epgId" style="width: 0px;" value="">
+																<input class="form-control" type="text" id="epgName" name="name" placeholder="EPG名称" value="">
+															</div>
+														</div>
+														<div class="input-inline" style="margin-top: 10px;">
+															<label>EPG来源:</label>
+															<div id="epgFrom"></div>
+														</div>
+														<div class="input-inline" style="margin-top: 10px;">
+															<label class="control-label">自动绑定规则:</label>
+															<textarea class="form-control" rows="5" id="epgRemarks" name="epgRemarks" placeholder="多个自动绑定规则匹配请用 | 分隔开" ></textarea>
+															<small class="help-block">提示：多个自动绑定规则匹配请用 | 分隔开</small>
+														</div>
+														<div>
+															<label class="control-label">自动绑定的分组:</label>
+															<small class="help-block">不在分组内的频道将不会自动绑定</small>
+															<div id="epgCaSelect"></div>
+														</div>
 													</div>
 													<div class="modal-footer">
-														<button type="button" onclick="submitFormPOST(this)" class="btn btn-primary" id="edit_save_epg" name="edit_save_epg">确定</button>
-														<button type="button" class="btn btn-default" data-dismiss="modal" onclick="$('#epgId').val('');$('#epgName').val('');$('#epgRemarks').val('');$('#editepgselect').val('');">关闭</button>
+														<button type="button" onclick="submitFormPOST(this)" class="btn btn-primary" id="save_epg" name="save_epg">确定</button>
+														<button type="button" class="btn btn-default" data-dismiss="modal" onclick="$('#epgId').val('');$('#epgName').val('');$('#epgRemarks').val('');epgCaSelect.setValue([ ]);epgFrom.setValue([ ]);">关闭</button>
 													</div>
 												</form>
 											</div>
@@ -196,13 +155,6 @@
                                                                     <div class="input-group">
                                                                         <div class="input-group-btn">
 																			<input type="hidden" id="epgId1" name="epgId" style="width: 0px;" value="">
-                                                                            <select class="form-control btn btn-default dropdown-toggle" style="width: 150px;" id="bdingepgselect" disabled>
-                                                                                <option value="">请选EPG来源</option>
-                                                                                <option value="cntv">CCTV官网</option>
-                                                                                {{ if gt (len .EpgFromList) 0 }}{{ range $key, $value := .EpgFromList }}
-																				<option value="{{ $key }}">{{ $value }}</option>
-																				{{ end }}{{ end }}
-                                                                            </select>&nbsp;&nbsp;
                                                                             <input class="form-control" type="text" id="epgName1" style="width: 125px;" placeholder="EPG名称" value="" disabled>&nbsp;&nbsp;
                                                                             <button class="btn btn-default"  type="button" onclick="clearCheck()" name="clearbind">清空绑定</button>
                                                                         </div>
@@ -249,5 +201,36 @@
 		</div>
 	</div>
 </main>
+<script>
+var epgFrom = xmSelect.render({
+	el: '#epgFrom',
+	name :"fromList",
+	tips: '请选择EPG节目单来源', 
+	autoRow: true,
+	toolbar: {show: true, list: ['ALL', 'CLEAR', 'REVERSE']},
+	data: [
+		{name: 'CCTV官网', value: 0},
+		{{ range .EpgFromDb }}
+		{name: '{{.Name}}', value: {{.ID}}},
+		{{end}}
+	]
+})
 
+var epgCaSelect = xmSelect.render({
+	el: '#epgCaSelect', 
+	name: 'caList',
+	autoRow: true,
+	tips: '选则自动绑定哪些频道分类中的频道', 
+	filterable: true,
+	paging: true,
+	pageSize: 5,
+	direction: 'up',
+	toolbar: {show: true, list: ['ALL', 'CLEAR', 'REVERSE']},
+	data: [
+		{{ range .CaList }}
+		{name: '{{.Name}}', value: {{.ID}}},
+		{{end}}
+	]
+})
+</script>
 {{ template "admin_footer" . }}

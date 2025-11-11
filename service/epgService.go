@@ -6,6 +6,7 @@ import (
 	"go-iptv/dto"
 	"go-iptv/models"
 	"go-iptv/until"
+	"slices"
 	"strings"
 	"time"
 )
@@ -23,8 +24,8 @@ func GetWeather() map[string]interface{} {
 	return res
 }
 
-func GetEpg(name string) dto.Response {
-	var res dto.Response
+func GetEpg(name string) dto.ApkResponse {
+	var res dto.ApkResponse
 	res.Code = 200
 	res.Msg = "请求成功!"
 
@@ -36,25 +37,27 @@ func GetEpg(name string) dto.Response {
 		res.Msg = "未找到相关节目!"
 		return res
 	}
-	if !strings.Contains(epg.Name, "-") {
+
+	fromList := strings.Split(epg.FromListStr, ",")
+
+	if len(fromList) <= 0 {
 		res.Code = 500
 		res.Msg = "未找到相关节目!"
 		return res
 	}
-	epgFrom := strings.SplitN(epg.Name, "-", 2)[0]
-	epgName := strings.SplitN(epg.Name, "-", 2)[1]
 
-	if epgName == "" {
-		return res
-	}
-
-	if strings.Contains(epgFrom, "cntv") {
-		res = getEpgCntv(epgName)
+	if slices.Contains(fromList, "0") {
+		res = getEpgCntv(epg.Name)
 		if len(res.Data) <= 0 {
-			res = getEpgXml(epgFrom, epgName)
+			var epgFromList []models.IptvEpgList
+			dao.DB.Where("epg_id in ?", fromList).Find(&epgFromList)
+			if len(epgFromList) > 0 {
+				return res
+			}
+			for _, epgFrom := range epgFromList {
+				res = getEpgXml(epgFrom.ID, epg.Name)
+			}
 		}
-	} else {
-		res = getEpgXml(epgFrom, epgName)
 	}
 	return res
 }
@@ -73,31 +76,36 @@ func GetSimpleEpg(name string) dto.SimpleResponse {
 		res.Msg = "未找到相关节目!"
 		return res
 	}
-	if !strings.Contains(epg.Name, "-") {
+
+	fromList := strings.Split(epg.FromListStr, ",")
+
+	if len(fromList) <= 0 {
 		res.Code = 500
 		res.Msg = "未找到相关节目!"
 		return res
 	}
 
-	epgFrom := strings.SplitN(epg.Name, "-", 2)[0]
-	epgName := strings.SplitN(epg.Name, "-", 2)[1]
-
-	if strings.Contains(epgFrom, "cntv") {
-		res = getSimpleEpgCntv(epgName)
+	if slices.Contains(fromList, "0") {
+		res = getSimpleEpgCntv(epg.Name)
 		if res.Data == (dto.Program{}) {
-			res = getSimpleEpg(epgFrom, epgName)
+			var epgFromList []models.IptvEpgList
+			dao.DB.Where("epg_id in ?", fromList).Find(&epgFromList)
+			if len(epgFromList) > 0 {
+				return res
+			}
+			for _, epgFrom := range epgFromList {
+				res = getSimpleEpg(epgFrom.ID, epg.Name)
+			}
 		}
-	} else {
-		res = getSimpleEpg(epgFrom, epgName)
 	}
 	return res
 }
 
-func getEpgCntv(name string) dto.Response {
+func getEpgCntv(name string) dto.ApkResponse {
 
 	var cacheKey = "cntv_" + name
 
-	var res dto.Response
+	var res dto.ApkResponse
 	res.Code = 200
 	res.Msg = "请求成功!"
 
@@ -234,13 +242,13 @@ func getSimpleEpgCntv(name string) dto.SimpleResponse {
 	return simpleRes
 }
 
-func getEpgXml(epgFrom, epgName string) dto.Response {
-	res := dto.Response{}
+func getEpgXml(epgFromId int64, epgName string) dto.ApkResponse {
+	res := dto.ApkResponse{}
 	res.Code = 200
 	res.Msg = "请求成功!"
 
 	var epgsList models.IptvEpgList
-	if err := dao.DB.Model(&models.IptvEpgList{}).Where("remarks = ? and status = 1", epgFrom).First(&epgsList).Error; err != nil {
+	if err := dao.DB.Model(&models.IptvEpgList{}).Where("id = ? and status = 1", epgFromId).First(&epgsList).Error; err != nil {
 		return res
 	}
 
@@ -291,14 +299,14 @@ func getEpgXml(epgFrom, epgName string) dto.Response {
 	return res
 }
 
-func getSimpleEpg(epgFrom, epgName string) dto.SimpleResponse {
+func getSimpleEpg(epgFromId int64, epgName string) dto.SimpleResponse {
 
 	res := dto.SimpleResponse{}
 	res.Code = 200
 	res.Msg = "请求成功!"
 
 	var epgsList models.IptvEpgList
-	if err := dao.DB.Model(&models.IptvEpgList{}).Where("remarks = ? and status = 1", epgFrom).First(&epgsList).Error; err != nil {
+	if err := dao.DB.Model(&models.IptvEpgList{}).Where("id = ? and status = 1", epgFromId).First(&epgsList).Error; err != nil {
 		return res
 	}
 

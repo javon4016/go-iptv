@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"strings"
 
 	"gorm.io/gorm"
 )
@@ -40,6 +41,18 @@ func (IptvChannel) TableName() string {
 	return "iptv_channels"
 }
 
+type IptvEpg struct {
+	ID      int64  `gorm:"primaryKey;autoIncrement" json:"id"`
+	Name    string `gorm:"column:name" json:"name"`
+	Content string `gorm:"column:content" json:"content"`
+	Status  int64  `gorm:"column:status" json:"status"`
+	Remarks string `gorm:"column:remarks" json:"remarks"`
+}
+
+func (IptvEpg) TableName() string {
+	return "iptv_epg"
+}
+
 func InitDB() bool {
 	dao.DB.AutoMigrate(&models.IptvAdmin{})
 	dao.DB.AutoMigrate(&models.IptvUser{})
@@ -49,8 +62,9 @@ func InitDB() bool {
 	initIptvCategory()
 	initIptvChannel()
 
-	dao.DB.AutoMigrate(&models.IptvEpg{})
 	dao.DB.AutoMigrate(&models.IptvEpgList{})
+	initEpg()
+
 	dao.DB.AutoMigrate(&models.IptvMeals{})
 	dao.DB.AutoMigrate(&models.IptvMovie{})
 	return true
@@ -158,4 +172,26 @@ func initIptvChannel() {
 
 	dao.DB.AutoMigrate(&models.IptvChannel{})
 	dao.DB.Model(&models.IptvChannel{}).Delete(&models.IptvCategory{}, "c_id = 0")
+}
+
+func initEpg() {
+	has := dao.DB.Migrator().HasColumn(&IptvEpg{}, "fromlist")
+	if !has {
+		dao.DB.AutoMigrate(&models.IptvEpg{})
+		var epgs []models.IptvEpg
+		dao.DB.Model(&models.IptvEpg{}).Find(&epgs)
+		for _, epg := range epgs {
+			if strings.Contains(epg.Name, "-") {
+				if epg.ID <= 18 {
+					epg.Name = strings.SplitN(epg.Name, "-", 2)[1]
+					epg.FromListStr = "0"
+					dao.DB.Save(&epg)
+				} else {
+					dao.DB.Delete(&epg)
+				}
+			}
+		}
+		until.UpdataEpgList()
+	}
+	dao.DB.AutoMigrate(&models.IptvEpg{})
 }

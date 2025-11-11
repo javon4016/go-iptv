@@ -5,8 +5,14 @@ updateYear();
 function replaceContent(html) {
 	var $temp = $('<div>').html(html);
 	var $newMain = $temp.find('main');
+	var scripts = $temp.find('script');
 	if ($newMain.length) $('main').replaceWith($newMain);
 	updateYear();
+
+	// 执行 script 内容
+	scripts.each(function() {
+		$.globalEval(this.text || this.textContent || this.innerHTML || '');
+	});
 }
 function getPath(url) {
     try {
@@ -341,23 +347,29 @@ function mealsGetCategory(btn) {
 	})
 }
 function epgEdit(btn) {
+	var action = window.location.pathname;
+	const params = new URLSearchParams();
+	if (btn.name && btn.value) {
+		params.append(btn.name, btn.value);
+	}else if (btn.name) {
+		params.append(btn.name, "");
+	}else{
+		lightyear.notify("表单提交失败", "danger", 3000);
+		return ;
+	}
 	var $tr = $(btn).closest("tr"); 
 	var epgid = $tr.find(".epg-id").data("value");
 	var epgname = $tr.find(".epg-name").data("value");
 	var epgremarks = $tr.find(".epg-remarks").data("value");
-	var index = epgname.indexOf("-");
-	var prefix, name;
-	if (index !== -1) {
-		prefix = epgname.substring(0, index);
-		name = epgname.substring(index + 1);
-	} else {
-		prefix = epgname;
-		name = "";
-	}
-	$("#editepgselect").val(prefix);
+	var val = $tr.find(".epg-from").data("value");
+	var epgfrom = (val === "" || val == null) ? [] : String(val).split(',');
+	var val1 = $tr.find(".epg-cas").data("value");
+	var epgcas = (val1 === "" || val1 == null) ? [] : String(val1).split(',');
 	$("#epgId").val(epgid);
-	$("#epgName").val(name);
+	$("#epgName").val(epgname);
 	$("#epgRemarks").val(epgremarks);
+	epgFrom.setValue(epgfrom);
+	epgCaSelect.setValue(epgcas);
 }
 function epgsGetChannel(btn) {
 	var action = window.location.pathname;
@@ -373,18 +385,10 @@ function epgsGetChannel(btn) {
 	var $tr = $(btn).closest("tr"); 
 	var epgid = $tr.find(".epg-id").data("value");
 	var epgname = $tr.find(".epg-name").data("value");
-	var index = epgname.indexOf("-");
-	var prefix, name;
-	if (index !== -1) {
-		prefix = epgname.substring(0, index);
-		name = epgname.substring(index + 1);
-	} else {
-		prefix = epgname;
-		name = "";
-	}
-	$("#bdingepgselect").val(prefix);
+
 	$("#epgId1").val(epgid);
-	$("#epgName1").val(name);
+	$("#epgName1").val(epgname);
+
 	fetch(action, {
 		method: "POST",
 		headers: {
@@ -401,7 +405,6 @@ function epgsGetChannel(btn) {
 		return JSON.parse(text); 
 	})
 	.then(res => {
-		lightyear.notify(res.msg, res.type, 1000);
 		if (res.type === "success") {
 			if (res.data && res.data.length > 0) {
 				var html = "";
@@ -643,8 +646,7 @@ function getChannels(id) {
     '<button class="btn btn-xs btn-info" type="button" value="' + item.id + '" data-toggle="modal" onclick="editChannel(this)" data-target="#editchannel">编辑</button>&nbsp;' +
     '<button class="btn btn-xs btn-danger" type="button" onclick="tdBtnPOST(this)" name="dellist" value="' + item.id + '">删除</button>' +
   '</td>';
-                    tbody.appendChild(tr);
-                    $('.selectpicker').selectpicker('refresh'); 
+                    tbody.appendChild(tr); 
                 });
             }
         },
@@ -736,8 +738,7 @@ function editChannel(btn) {
 	$("#chId").val(chid);
 	$("#chname").val(cname);
 	$("#chURL").val(curl);
-	$("#e_id").val(ceid);
-	$("#e_id").selectpicker('refresh');
+	chEpg.setValue([ ceid ]);
 	if (!logoSrc) {
     	$("#logoContainerEdit").hide();
 	} else {
@@ -775,15 +776,7 @@ function saveChannelsOne(btn){
 		}
 	});
 }
-function getLogo(){
-	var $select = $("#e_id");
-    var logoSrc = $select.find("option:selected").data("value") || "";
-    if (logoSrc) {
-        $("#logoContainerEdit").show().find("img").attr("src", logoSrc);
-    } else {
-        $("#logoContainerEdit").hide().find("img").attr("src", "");
-    }
-}
+
 function rssPOST(btn) {
 	var $tr = $(btn).closest("tr"); 
 	var mealid = $tr.find(".meal-id").data("value");

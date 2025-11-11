@@ -43,6 +43,7 @@ type WSClient struct {
 }
 
 func StartLicense() bool {
+	log.Println("启动License...")
 	cmd := exec.Command("bash", "-c", "nohup /app/license > /config/license.log 2>&1 &")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -53,7 +54,7 @@ func StartLicense() bool {
 }
 
 func IsRunning() bool {
-	cmd := exec.Command("bash", "-c", "ps -ef | grep 'license' | grep -v grep")
+	cmd := exec.Command("bash", "-c", "ps -ef | grep '/license' | grep -v grep")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		log.Printf("检查License进程出错: %v", err)
@@ -95,10 +96,10 @@ func (c *WSClient) connect() error {
 			return nil
 		}
 		log.Printf("❌ 第 %d 次连接失败: %v, 3 秒后重试...", i, err)
-		time.Sleep(3 * time.Second)
+		time.Sleep(5 * time.Second)
 	}
 	StartLicense()
-	time.Sleep(3 * time.Second)
+	time.Sleep(5 * time.Second)
 	c.connect()
 	return fmt.Errorf("连接失败: %w", err)
 }
@@ -113,11 +114,11 @@ func (c *WSClient) IsOnline() bool {
 // -------------------- 重启并重新连接 --------------------
 
 // RestartLicense 会尝试重启 License 服务并重新建立 WS 连接
-func (c *WSClient) RestartLic() bool {
+func RestartLic() bool {
 	log.Println("♻️ 正在重启 License 服务...")
 
 	// 1. 终止旧进程
-	stopCmd := exec.Command("bash", "-c", "pkill -f 'license'")
+	stopCmd := exec.Command("bash", "-c", "pkill -f '/license'")
 	if err := stopCmd.Run(); err != nil {
 		log.Printf("⚠️ 停止License进程失败: %v", err)
 	}
@@ -130,18 +131,24 @@ func (c *WSClient) RestartLic() bool {
 		return false
 	}
 
-	time.Sleep(3 * time.Second) // 给新进程一点启动时间
+	time.Sleep(5 * time.Second) // 给新进程一点启动时间
 
-	// 3. 重连 WebSocket
-	c.lock.Lock()
-	if c.conn != nil {
-		c.conn.Close()
+	ws, err := ConLicense("ws://127.0.0.1:81/ws")
+	if err != nil {
+		log.Println("license初始化错误")
+		return false
 	}
-	c.closed = false
-	c.lock.Unlock()
-
-	if err := c.connect(); err != nil {
-		log.Printf("❌ License WS 重连失败: %v", err)
+	WS = ws
+	res, err := WS.SendWS(Request{Action: "getlic"})
+	if err == nil {
+		if err := json.Unmarshal(res.Data, &Lic); err == nil {
+			log.Println("license初始化成功")
+			log.Println("机器码:", Lic.ID)
+		} else {
+			log.Println("license信息解析错误:", err)
+		}
+	} else {
+		log.Println("license初始化错误")
 		return false
 	}
 
@@ -277,7 +284,7 @@ func (c *WSClient) Close() {
 // 			continue
 // 		}
 
-// 		log.Printf("响应: %+v\n", resp)
+// 		log.Println("响应: %+v\n", resp)
 // 		time.Sleep(10 * time.Second)
 // 	}
 // }

@@ -21,7 +21,7 @@ func EpgCron() {
 
 	// 构建cron表达式（秒 分 时 * * *）
 	cronExpr := fmt.Sprintf("%d %d %d * * *", second, minute, hour)
-	log.Printf("设置随机EPG自动更新时间为: %02d:%02d:%02d", hour, minute, second)
+	log.Println("设置随机EPG自动更新时间为: %02d:%02d:%02d", hour, minute, second)
 
 	// cron 表达式格式: 秒 分 时 日 月 星期
 	// 下面表示每天 01:00:00

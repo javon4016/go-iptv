@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func AdminLogin(username, password string) dto.ReturnJsonDto {
+func AdminLogin(username, password string, reMe bool) dto.ReturnJsonDto {
 	// 获取记住密码选项
 
 	var userDb models.IptvAdmin
@@ -18,8 +18,12 @@ func AdminLogin(username, password string) dto.ReturnJsonDto {
 		return dto.ReturnJsonDto{Code: 0, Msg: "用户名或密码错误", Type: "danger"}
 	}
 
-	// 生成 JWT token，有效期为7天
-	tokenString, err := until.GenerateJWT(username, 7*24*time.Hour)
+	// 生成 JWT token
+	tTime := 2 * time.Hour
+	if reMe {
+		tTime = 7 * 24 * time.Hour
+	}
+	tokenString, err := until.GenerateJWT(username, tTime)
 	if err != nil {
 		return dto.ReturnJsonDto{Code: 0, Msg: "生成Token失败", Type: "danger"}
 	}

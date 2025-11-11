@@ -145,11 +145,17 @@ func M3UToGenreTXT(m3u string) string {
 
 func GetEpgName(name string) string {
 	var epgs []models.IptvEpg
-	dao.DB.Model(&models.IptvEpg{}).Where("content like ? and status = 1", "%"+name+"%").Find(&epgs)
+	dao.DB.Model(&models.IptvEpg{}).Where("(content like ? or remarks like ?) and status = 1", "%"+name+"%", "%"+name+"%").Find(&epgs)
 
 	var epgName string
 	for _, epg := range epgs {
 		for _, v := range strings.Split(epg.Content, ",") {
+			if strings.EqualFold(name, v) {
+				epgName = epg.Name
+				break
+			}
+		}
+		for _, v := range strings.Split(epg.Remarks, "|") {
 			if strings.EqualFold(name, v) {
 				epgName = epg.Name
 				break
@@ -164,7 +170,7 @@ func GetEpgName(name string) string {
 		return epgName
 	}
 
-	return strings.SplitN(epgName, "-", 2)[1]
+	return epgName
 }
 
 func IsM3UContent(data string) bool {

@@ -45,10 +45,9 @@ func Channels(c *gin.Context) {
 
 	logoList := until.GetLogos()
 	for i, v := range pageData.Epgs {
-		epgName := strings.SplitN(v.Name, "-", 2)[1]
 		for _, logo := range logoList {
 			logoName := strings.Split(logo, ".")[0]
-			if strings.EqualFold(epgName, logoName) {
+			if strings.EqualFold(v.Name, logoName) {
 				pageData.Epgs[i].Logo = "/logo/" + logo
 			}
 		}

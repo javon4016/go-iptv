@@ -96,7 +96,8 @@ func initIptvEpgList() {
 			Status:  1,
 		}
 		dao.DB.Model(&models.IptvEpgList{}).Save(&update)
-		if !until.UpdataEpgListOne(update.ID) {
+		a, _ := until.UpdataEpgListOne(update, true)
+		if !a {
 			log.Println("初始化51zmt失败")
 		}
 	}

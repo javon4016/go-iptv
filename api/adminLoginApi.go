@@ -12,16 +12,20 @@ func Login(c *gin.Context) {
 	username := c.PostForm("username")
 	password := until.HashPassword(c.PostForm("password"))
 	remember := c.PostForm("rememberpass")
-	res := service.AdminLogin(username, password)
+
+	reMe := false
+	if remember == "on" || remember == "true" || remember == "1" {
+		reMe = true
+	}
+	res := service.AdminLogin(username, password, reMe)
 
 	token, ok := res.Data.(string)
 	if !ok || token == "" {
-		c.JSON(200, dto.ReturnJsonDto{Code: 0, Msg: "生成Token失败", Type: "danger"})
+		c.JSON(200, res)
 		return
-
 	}
 
-	if remember == "on" || remember == "true" || remember == "1" {
+	if reMe {
 		c.SetCookie("token", token, 7*24*3600, "/", "", false, true)
 	} else {
 		c.SetCookie("token", token, 2*3600, "/", "", false, true)

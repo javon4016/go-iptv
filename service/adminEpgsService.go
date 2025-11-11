@@ -1,6 +1,8 @@
 package service
 
 import (
+	"errors"
+	"fmt"
 	"go-iptv/dao"
 	"go-iptv/dto"
 	"go-iptv/models"
@@ -12,9 +14,10 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
-func GetEpgData(params url.Values) dto.ReturnJsonDto {
+func GetChName(params url.Values) dto.ReturnJsonDto {
 	//编辑
 	epgId := params.Get("bdingepg")
 	if epgId == "" {
@@ -26,8 +29,10 @@ func GetEpgData(params url.Values) dto.ReturnJsonDto {
 		return dto.ReturnJsonDto{Code: 0, Msg: "查询EPG 失败", Type: "danger"}
 	}
 
+	caList := strings.Split(epg.CasStr, ",")
+
 	var channeList []models.IptvChannel
-	if err := dao.DB.Model(&models.IptvChannel{}).Select("distinct name").Order("c_id,id").Find(&channeList).Error; err != nil {
+	if err := dao.DB.Model(&models.IptvChannel{}).Select("distinct name").Where("c_id in ? and status = 1", caList).Order("c_id,id").Find(&channeList).Error; err != nil {
 		return dto.ReturnJsonDto{Code: 0, Msg: "查询频道失败", Type: "danger"}
 	}
 
@@ -38,14 +43,14 @@ func GetEpgData(params url.Values) dto.ReturnJsonDto {
 	for _, v := range channeList {
 		var data dto.EpgsReturnDto
 		data.Name = v.Name
-		data.Checked = false
+		data.Select = false
 		for _, v1 := range CheckList {
 			if strings.EqualFold(v1, v.Name) {
-				data.Checked = true
+				data.Select = true
 			}
 		}
 		if strings.EqualFold(epg.Name, v.Name) {
-			data.Checked = true
+			data.Select = true
 		}
 		dataList = append(dataList, data)
 	}
@@ -53,75 +58,90 @@ func GetEpgData(params url.Values) dto.ReturnJsonDto {
 	return dto.ReturnJsonDto{Code: 1, Msg: "操作成功", Type: "success", Data: dataList}
 }
 
-func SaveEpg(params url.Values, editType int) dto.ReturnJsonDto {
-	switch editType {
-	case 1:
-		id := params.Get("epgId")
-		if id == "" {
-			return dto.ReturnJsonDto{Code: 0, Msg: "EPG id不能为空", Type: "danger"}
-		}
-		name := params.Get("name")
-		if name == "" {
-			return dto.ReturnJsonDto{Code: 0, Msg: "EPG 名称不能为空", Type: "danger"}
-		}
-		epg := params.Get("epg")
-		if epg == "" {
-			return dto.ReturnJsonDto{Code: 0, Msg: "EPG 来源不能为空", Type: "danger"}
-		}
-
-		var epgData models.IptvEpg
-
-		if err := dao.DB.Model(&models.IptvEpg{}).Where("id = ?", id).First(&epgData).Error; err != nil {
-			return dto.ReturnJsonDto{Code: 0, Msg: "查询EPG失败", Type: "danger"}
-		}
-		epgData.Name = epg + "-" + name
-		epgData.Remarks = params.Get("epgRemarks")
-
-		if err := dao.DB.Save(&epgData).Error; err != nil {
-			return dto.ReturnJsonDto{Code: 0, Msg: "保存EPG失败", Type: "danger"}
-		}
-		return dto.ReturnJsonDto{Code: 1, Msg: "EPG " + epgData.Name + "保存成功", Type: "success"}
-	case 2:
-		id := params.Get("epgId")
-		if id == "" {
-			return dto.ReturnJsonDto{Code: 0, Msg: "EPG id不能为空", Type: "danger"}
-		}
-
-		namesList := params["names[]"]
-
-		var epgData models.IptvEpg
-
-		if err := dao.DB.Model(&models.IptvEpg{}).Where("id = ?", id).First(&epgData).Error; err != nil {
-			return dto.ReturnJsonDto{Code: 0, Msg: "查询EPG失败", Type: "danger"}
-		}
-		epgData.Content = strings.Join(namesList, ",")
-
-		if err := dao.DB.Save(&epgData).Error; err != nil {
-			return dto.ReturnJsonDto{Code: 0, Msg: "保存EPG失败", Type: "danger"}
-		}
-		return dto.ReturnJsonDto{Code: 1, Msg: "EPG " + epgData.Name + "保存成功", Type: "success"}
-	default:
-		name := params.Get("name")
-		if name == "" {
-			return dto.ReturnJsonDto{Code: 0, Msg: "EPG 名称不能为空", Type: "danger"}
-		}
-		epg := params.Get("epg")
-		if epg == "" {
-			return dto.ReturnJsonDto{Code: 0, Msg: "EPG 来源不能为空", Type: "danger"}
-		}
-
-		remarks := params.Get("remarks")
-
-		var epgData models.IptvEpg
-		epgData.Name = epg + "-" + name
-		epgData.Remarks = remarks
-		epgData.Status = 1
-
-		if err := dao.DB.Save(&epgData).Error; err != nil {
-			return dto.ReturnJsonDto{Code: 0, Msg: "保存EPG失败", Type: "danger"}
-		}
-		return dto.ReturnJsonDto{Code: 1, Msg: "EPG " + epgData.Name + "保存成功", Type: "success"}
+func GetCa(params url.Values) dto.ReturnJsonDto {
+	epgId := params.Get("epgGetCa")
+	if epgId == "" {
+		return dto.ReturnJsonDto{Code: 0, Msg: "EPG id不能为空", Type: "danger"}
 	}
+
+	var epg models.IptvEpg
+	if err := dao.DB.Where("id = ?", epgId).First(&epg).Error; err != nil {
+		return dto.ReturnJsonDto{Code: 0, Msg: "查询EPG 失败", Type: "danger"}
+	}
+
+	var caList []models.IptvCategory
+	if err := dao.DB.Model(&models.IptvCategory{}).Where("enable = 1 and type != ?", "auto").Find(&caList).Error; err != nil {
+		return dto.ReturnJsonDto{Code: 0, Msg: "查询分组失败", Type: "danger"}
+	}
+
+	caIdList := strings.Split(epg.CasStr, ",")
+	var dataList []dto.EpgsReturnDto
+	for _, v := range caList {
+		var data dto.EpgsReturnDto
+		data.Id = v.ID
+		data.Name = v.Name
+		data.Select = false
+		for _, v1 := range caIdList {
+			if strings.EqualFold(v1, fmt.Sprintf("%d", v.ID)) {
+				data.Select = true
+			}
+		}
+		dataList = append(dataList, data)
+	}
+	return dto.ReturnJsonDto{Code: 1, Msg: "操作成功", Type: "success", Data: dataList}
+}
+
+func SaveEpg(params url.Values) dto.ReturnJsonDto {
+	name := params.Get("name")
+	if name == "" {
+		return dto.ReturnJsonDto{Code: 0, Msg: "EPG 名称不能为空", Type: "danger"}
+	}
+
+	var epgData models.IptvEpg
+	id := params.Get("epgId")
+	if id != "" {
+		if err := dao.DB.First(&epgData, "id = ?", id).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return dto.ReturnJsonDto{Code: 0, Msg: "EPG记录不存在", Type: "danger"}
+			}
+			return dto.ReturnJsonDto{Code: 0, Msg: "查询EPG失败", Type: "danger"}
+		}
+	}
+
+	epgData.Name = name
+	epgData.Remarks = params.Get("epgRemarks")
+
+	epgData.CasStr = params.Get("caList")
+	epgData.FromListStr = params.Get("fromList")
+
+	if err := dao.DB.Save(&epgData).Error; err != nil {
+		return dto.ReturnJsonDto{Code: 0, Msg: "保存EPG失败", Type: "danger"}
+	}
+	return dto.ReturnJsonDto{Code: 1, Msg: "EPG " + epgData.Name + "保存成功", Type: "success"}
+}
+
+func BdingEpg(params url.Values) dto.ReturnJsonDto {
+	id := params.Get("epgId")
+	if id == "" {
+		return dto.ReturnJsonDto{Code: 0, Msg: "EPG id不能为空", Type: "danger"}
+	}
+
+	namesList := params["names[]"]
+
+	var epgData models.IptvEpg
+
+	if err := dao.DB.First(&epgData, "id = ?", id).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return dto.ReturnJsonDto{Code: 0, Msg: "EPG记录不存在", Type: "danger"}
+		}
+		return dto.ReturnJsonDto{Code: 0, Msg: "查询EPG失败", Type: "danger"}
+	}
+	epgData.Content = strings.Join(namesList, ",")
+
+	if err := dao.DB.Save(&epgData).Error; err != nil {
+		return dto.ReturnJsonDto{Code: 0, Msg: "保存EPG失败", Type: "danger"}
+	}
+	return dto.ReturnJsonDto{Code: 1, Msg: "EPG " + epgData.Name + "保存成功", Type: "success"}
 }
 
 func ChangeStatus(params url.Values) dto.ReturnJsonDto {
@@ -232,24 +252,29 @@ func EpgImport(params url.Values) dto.ReturnJsonDto {
 		if err := dao.DB.Model(&models.IptvEpgList{}).Where("id = ?", eId).Updates(&iptvEpgList).Error; err != nil {
 			return dto.ReturnJsonDto{Code: 0, Msg: "更新失败", Type: "danger"}
 		}
-		return dto.ReturnJsonDto{Code: 1, Msg: "更新成功", Type: "success"}
+		do, err := until.UpdataEpgListOne(iptvEpgList, true)
+		if do {
+			return dto.ReturnJsonDto{Code: 1, Msg: "更新成功", Type: "success"}
+		}
+		return dto.ReturnJsonDto{Code: 0, Msg: err.Error(), Type: "danger"}
 	} else {
 		if err := dao.DB.Model(&models.IptvEpgList{}).Create(&iptvEpgList).Error; err != nil {
 			return dto.ReturnJsonDto{Code: 0, Msg: "添加失败", Type: "danger"}
 		}
-		return dto.ReturnJsonDto{Code: 1, Msg: "添加成功", Type: "success"}
+		do, err := until.UpdataEpgListOne(iptvEpgList, true)
+		if do {
+			return dto.ReturnJsonDto{Code: 1, Msg: "添加成功", Type: "success"}
+		}
+		return dto.ReturnJsonDto{Code: 0, Msg: err.Error(), Type: "danger"}
 	}
-
 }
 
 func UploadLogo(c *gin.Context) dto.ReturnJsonDto {
 
 	epgFromName := c.PostForm("epgname")
-	if epgFromName == "" || !strings.Contains(epgFromName, "-") || !until.IsSafe(epgFromName) {
+	if epgFromName == "" || !until.IsSafe(epgFromName) {
 		return dto.ReturnJsonDto{Code: 0, Msg: "EPG名称不合法", Type: "danger"}
 	}
-
-	epgName := strings.SplitN(epgFromName, "-", 2)[1]
 
 	file, err := c.FormFile("uploadlogo")
 	if err != nil {
@@ -271,7 +296,7 @@ func UploadLogo(c *gin.Context) dto.ReturnJsonDto {
 		return dto.ReturnJsonDto{Code: 0, Msg: "只允许上传 PNG 文件", Type: "danger"}
 	}
 
-	dst := "/config/logo/" + epgName + ".png"
+	dst := "/config/logo/" + epgFromName + ".png"
 	if err := c.SaveUploadedFile(file, dst); err != nil {
 		return dto.ReturnJsonDto{Code: 0, Msg: "保存文件失败:" + err.Error(), Type: "danger"}
 	}
@@ -288,11 +313,11 @@ func UpdateEpgList(params url.Values) dto.ReturnJsonDto {
 	if err := dao.DB.Model(&models.IptvEpgList{}).Where("id = ?", listId).First(&epgList).Error; err != nil {
 		return dto.ReturnJsonDto{Code: 0, Msg: "获取频道列表失败:" + err.Error(), Type: "danger"}
 	}
-
-	if until.UpdataEpgListOne(epgList.ID) {
+	do, err := until.UpdataEpgListOne(epgList, false)
+	if do {
 		return dto.ReturnJsonDto{Code: 1, Msg: "更新成功", Type: "success"}
 	}
-	return dto.ReturnJsonDto{Code: 0, Msg: "更新失败", Type: "danger"}
+	return dto.ReturnJsonDto{Code: 0, Msg: err.Error(), Type: "danger"}
 }
 
 func UpdateEpgListAll() dto.ReturnJsonDto {
@@ -314,9 +339,22 @@ func DelEpgList(params url.Values) dto.ReturnJsonDto {
 	if err := dao.DB.Where("id = ?", listId).Delete(&models.IptvEpgList{}).Error; err != nil {
 		return dto.ReturnJsonDto{Code: 0, Msg: "删除列表失败:" + err.Error(), Type: "danger"}
 	}
-	if err := dao.DB.Where("name like ?", epgList.Remarks+"-%").Delete(&models.IptvEpg{}).Error; err != nil {
-		return dto.ReturnJsonDto{Code: 0, Msg: "删除EPG失败:" + err.Error(), Type: "danger"}
+
+	var epgs []models.IptvEpg
+	dao.DB.Model(&models.IptvEpg{}).Where("fromlist like ?", "%"+fmt.Sprintf("%d", epgList.ID)+"%").Find(&epgs)
+	for _, epg := range epgs {
+		fromList := strings.Split(epg.FromListStr, ",")
+		for i, v := range fromList {
+			if v == fmt.Sprintf("%d", epgList.ID) {
+				fromList = append(fromList[:i], fromList[i+1:]...)
+				break // 若只删除第一个匹配项
+			}
+		}
+		dao.DB.Model(&models.IptvEpg{}).Where("id = ?", epg.ID).Update("fromlist", strings.Join(fromList, ","))
 	}
+	// if err := dao.DB.Where("name like ?", epgList.Remarks+"-%").Delete(&models.IptvEpg{}).Error; err != nil {
+	// 	return dto.ReturnJsonDto{Code: 0, Msg: "删除EPG失败:" + err.Error(), Type: "danger"}
+	// }
 	return dto.ReturnJsonDto{Code: 1, Msg: "删除成功", Type: "success"}
 }
 
@@ -329,8 +367,7 @@ func DeleteLogo(params url.Values) dto.ReturnJsonDto {
 	if err := dao.DB.Model(&models.IptvEpg{}).Where("id = ?", bjId).First(&epg).Error; err != nil {
 		return dto.ReturnJsonDto{Code: 0, Msg: "获取频道列表失败:" + err.Error(), Type: "danger"}
 	}
-	logName := strings.SplitN(epg.Name, "-", 2)[1]
-	logoFile := "/config/logo/" + logName + ".png"
+	logoFile := "/config/logo/" + epg.Name + ".png"
 	if err := os.Remove(logoFile); err != nil {
 		return dto.ReturnJsonDto{Code: 0, Msg: "删除失败", Type: "danger"}
 	}
