@@ -32,7 +32,6 @@ function updateMenuActive(url) {
 	$link.parent("li").addClass('active');
 	$link.closest(".nav-item-has-subnav").addClass("open");
 	$link.closest('.nav-item').addClass('active'); 
-	$('.selectpicker').selectpicker('refresh');
 }
 function loadPage(url, pushHistory = true) {
 	if (!url || url === "javascript:;" || url === "javascript:void(0)") return;

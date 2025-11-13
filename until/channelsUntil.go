@@ -492,3 +492,38 @@ func AddChannelList(srclist string, cId, listId int64, doRepeat bool) (int, erro
 	dao.DB.Model(&models.IptvCategory{}).Where("id = ?", cId).Update("rawcount", rawCount)
 	return repetNum, nil
 }
+
+func SyncCaToEpg(caId int64) {
+	dao.DB.Model(&models.IptvEpg{}).
+		Where("status = ?", 1).
+		// 防止重复追加：只有不包含该 caId 时才更新
+		Update("fromlist", gorm.Expr(`
+			CASE 
+				WHEN (fromlist = '' OR fromlist IS NULL) THEN ?
+				WHEN FIND_IN_SET(?, fromlist) = 0 THEN CONCAT(fromlist, ',', ?)
+				ELSE fromlist
+			END
+		`, caId, caId, caId))
+}
+
+func RemoveCaFromEpg(caId int64) {
+	dao.DB.Model(&models.IptvEpg{}).
+		Where("status = ?", 1).
+		Update("fromlist", gorm.Expr(`
+			TRIM(BOTH ',' FROM 
+				REPLACE(
+					REPLACE(
+						REPLACE(
+							CONCAT(',', fromlist, ','), 
+							CONCAT(',', ?, ','), 
+							','
+						),
+						',,', 
+						','
+					),
+					',,', 
+					','
+				)
+			)
+		`, caId))
+}

@@ -40,7 +40,8 @@ func Epgs(c *gin.Context) {
 			res = service.ClearCache()
 		case "deleteLogo":
 			res = service.DeleteLogo(params)
-
+		case "delnotfrom":
+			res = service.DelNotFrom()
 		}
 
 	}

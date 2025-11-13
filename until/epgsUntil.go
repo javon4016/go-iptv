@@ -241,10 +241,6 @@ func UpdataEpgListOne(list models.IptvEpgList, newAdd bool) (bool, error) {
 
 func BindChannel() bool {
 	// ClearBind() // 清空绑定
-	var channelList []models.IptvChannel
-	if err := dao.DB.Model(&models.IptvChannel{}).Select("distinct name, c_id").Order("c_id,id").Find(&channelList).Error; err != nil {
-		return false
-	}
 
 	var epgList []models.IptvEpg
 	if err := dao.DB.Model(&models.IptvEpg{}).Where("status = 1").Find(&epgList).Error; err != nil {
@@ -255,10 +251,10 @@ func BindChannel() bool {
 		caList := strings.Split(epgData.CasStr, ",")
 		var tmpList []string
 		nameList := strings.Split(epgData.Remarks, "|")
+		var channelList []models.IptvChannel
+		dao.DB.Model(&models.IptvChannel{}).Select("distinct name").Where("status = 1 and c_id in (?)", caList).Find(&channelList)
+
 		for _, channelData := range channelList {
-			if !Int64InStringSlice(channelData.CId, caList) {
-				continue
-			}
 			if strings.EqualFold(channelData.Name, epgData.Name) {
 				tmpList = append(tmpList, channelData.Name)
 				continue
@@ -274,7 +270,7 @@ func BindChannel() bool {
 		chNameList := MergeAndUnique(strings.Split(epgData.Content, ","), tmpList)
 
 		if len(tmpList) > 0 {
-			dao.DB.Model(&models.IptvChannel{}).Where("name in (?) and c_id in (?)", chNameList, caList).Update("e_id", epgData.ID)
+			dao.DB.Model(&models.IptvChannel{}).Where("name in (?) and c_id in (?) and status = 1", chNameList, caList).Update("e_id", epgData.ID)
 
 			if !EqualStringSets(strings.Split(epgData.Content, ","), chNameList) {
 				epgData.Content = strings.Join(chNameList, ",")
@@ -296,7 +292,7 @@ func BindChannel() bool {
 func SyncEpgs(fromId int64, epgs []models.IptvEpg, newAdd bool) (bool, error) {
 	// 1. 查询数据库中已有的记录
 	var oldEpgs []models.IptvEpg
-	if err := dao.DB.Where("status = 1").Find(&oldEpgs).Error; err != nil {
+	if err := dao.DB.Model(&models.IptvEpg{}).Where("status = 1").Find(&oldEpgs).Error; err != nil {
 		return false, err
 	}
 
@@ -306,12 +302,13 @@ func SyncEpgs(fromId int64, epgs []models.IptvEpg, newAdd bool) (bool, error) {
 	for _, o := range oldEpgs {
 		oldMap[o.Name] = true
 		for i, n := range epgs {
-			if newAdd && o.Name == n.Name {
+			if o.Name == n.Name {
 				epgs[i].ID = o.ID
 				epgs[i].FromListStr = o.FromListStr
 				epgs[i].Content = o.Content
 				epgs[i].Remarks = o.Remarks
 				epgs[i].Status = o.Status
+				epgs[i].CasStr = o.CasStr
 			}
 			newMap[n.Name] = true
 		}
@@ -348,6 +345,11 @@ func SyncEpgs(fromId int64, epgs []models.IptvEpg, newAdd bool) (bool, error) {
 	}
 	addCount := 0
 	if len(toAdd) > 0 {
+		var caIDs []int64
+		dao.DB.Model(&models.IptvCategory{}).
+			Where("enable = 1 AND type != ?", "auto").
+			Pluck("id", &caIDs)
+
 		for _, toAddOne := range toAdd {
 			oldList := strings.Split(toAddOne.FromListStr, ",")
 			tmpList := append(oldList, fmt.Sprintf("%d", fromId))
@@ -356,6 +358,9 @@ func SyncEpgs(fromId int64, epgs []models.IptvEpg, newAdd bool) (bool, error) {
 
 			if EqualStringSets(oldList, tmpList) {
 				continue
+			}
+			if toAddOne.ID == 0 {
+				toAddOne.CasStr = strings.Trim(strings.Join(strings.Fields(fmt.Sprint(caIDs)), ","), "[]") // 转换为字符串
 			}
 			addCount++
 			dao.DB.Save(&toAddOne)

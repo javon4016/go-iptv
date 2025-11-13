@@ -196,6 +196,7 @@ func GenreChannels(listName, srclist, ua string, listId int64, doRepeat bool) {
 			if err := dao.DB.Create(&category).Error; err != nil {
 				continue
 			}
+			go until.SyncCaToEpg(category.ID)
 			until.AddChannelList(genreList, category.ID, listId, doRepeat)
 		} else {
 			until.AddChannelList(genreList, category.ID, listId, doRepeat)

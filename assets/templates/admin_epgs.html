@@ -43,6 +43,7 @@
 												<form action="/admin/epgsList" method="POST">
 													<label class="control-label">操作：</label>
 													<button class="btn btn-default" type="button" data-toggle="modal" data-target="#editepg">增加EPG</button>
+													<button class="btn btn-default" type="button" name="delnotfrom" onclick="confirmAndSubmit(this,'确定要删除无来源EPG吗？')">删除无来源EPG</button>
 													<button class="btn btn-default" type="button" onclick="submitFormPOST(this)" name="bindchannel">自动绑定频道</button>
 													<button class="btn btn-default" type="button" onclick="confirmAndSubmit(this,'确定要清空绑定的频道列表吗？ 手动绑定将会失效不会自动添加！')" name="clearbind">清空绑定</button>
 													<button class="btn btn-default" type="button" name="clearcache" onclick="confirmAndSubmit(this,'确定要清空EPG缓存吗？')">清空EPG缓存</button>

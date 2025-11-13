@@ -134,7 +134,7 @@
                         <div class="form-inline">
                             <div class="form-group" style="margin-right: 15px;">
                                 <label>解码模式：</label>
-                                <select class="form-control selectpicker" name="decoder" onchange="tdBtnPOST(this)" class="btn btn-sm btn-default dropdown-toggle" style="width: 115px;">
+                                <select class="form-control " name="decoder" onchange="tdBtnPOST(this)" class="btn btn-sm btn-default dropdown-toggle" style="width: 115px;">
                                     <option value='0' {{if eq .App.Decoder 0}}selected{{end}} >自动选择</option>
                                     <option value='1' {{if eq .App.Decoder 1}}selected{{end}} >硬件解码</option>
                                     <option value='2' {{if eq .App.Decoder 2}}selected{{end}} >软件解码</option>	
@@ -143,7 +143,7 @@
         
                             <div class="form-group" style="margin-right: 15px;">
                                 <label>超时跳转时长：</label>
-                                <select class="form-control selectpicker" name="buffTimeOut" onchange="tdBtnPOST(this)" class="btn btn-sm btn-default dropdown-toggle" style="width: 95px;">
+                                <select class="form-control " name="buffTimeOut" onchange="tdBtnPOST(this)" class="btn btn-sm btn-default dropdown-toggle" style="width: 95px;">
                                     <option value='5' {{if eq .App.BuffTimeout 5}}selected{{end}} >5 秒</option>
                                     <option value='10' {{if eq .App.BuffTimeout 10}}selected{{end}} >10 秒</option>
                                     <option value='15' {{if eq .App.BuffTimeout 15}}selected{{end}} >15 秒</option>

@@ -199,6 +199,7 @@ func AddList(params url.Values) dto.ReturnJsonDto {
 			UA:     iptvCategoryList.UA,
 		}
 		dao.DB.Model(&models.IptvCategory{}).Create(&iptvCategory)
+		go until.SyncCaToEpg(iptvCategory.ID)
 		repeat, err := until.AddChannelList(urlData, iptvCategory.ID, iptvCategoryList.ID, doRepeat)
 		if err == nil {
 			return dto.ReturnJsonDto{Code: 1, Msg: fmt.Sprintf("更新列表 %s 成功，重复 %d 条\n", listName, repeat), Type: "success"}
@@ -283,6 +284,7 @@ func UpdateList(params url.Values) dto.ReturnJsonDto {
 					UA:     iptvCategoryList.UA,
 				}
 				dao.DB.Model(&models.IptvCategory{}).Create(&oldC)
+				go until.SyncCaToEpg(oldC.ID)
 			}
 
 			repeat, err := until.AddChannelList(urlData, oldC.ID, iptvCategoryList.ID, doRepeat)
@@ -310,6 +312,7 @@ func UpdateList(params url.Values) dto.ReturnJsonDto {
 				ListId: iptvCategoryList.ID,
 			}
 			dao.DB.Model(&models.IptvCategory{}).Create(&oldC)
+			go until.SyncCaToEpg(oldC.ID)
 		}
 
 		repeat, err := until.AddChannelList(urlData, oldC.ID, iptvCategoryList.ID, doRepeat)
@@ -334,6 +337,13 @@ func DelList(params url.Values) dto.ReturnJsonDto {
 	}
 
 	dao.DB.Where("id = ?", iptvCategoryList.ID).Delete(&models.IptvCategoryList{})
+	var ids []int64
+	dao.DB.Model(&models.IptvCategory{}).
+		Where("list_id = ?", iptvCategoryList.ID).
+		Pluck("id", &ids)
+	for _, id := range ids {
+		go until.RemoveCaFromEpg(id)
+	}
 	dao.DB.Where("list_id = ?", iptvCategoryList.ID).Delete(&models.IptvCategory{})
 	dao.DB.Where("list_id = ?", iptvCategoryList.ID).Delete(&models.IptvChannel{})
 	go until.CleanMealsTxtCacheAll() // 删除缓存
@@ -353,6 +363,7 @@ func DelCa(params url.Values) dto.ReturnJsonDto {
 
 	dao.DB.Model(&models.IptvCategory{}).Where("id = ?", category.ID).Delete(&models.IptvCategory{})
 	dao.DB.Model(&models.IptvChannel{}).Where("c_id = ?", category.ID).Delete(&models.IptvChannel{})
+	go until.RemoveCaFromEpg(category.ID)
 	go until.CleanAutoCacheAll()
 	return dto.ReturnJsonDto{Code: 1, Msg: fmt.Sprintf("删除频道 %s 成功\n", category.Name), Type: "success"}
 }
@@ -513,7 +524,7 @@ func SaveChannelsOne(params url.Values) dto.ReturnJsonDto {
 	chURL := params.Get("chURL")
 	e_id := params.Get("e_id")
 
-	if chId == "" || chname == "" || chURL == "" || e_id == "" {
+	if chId == "" || chname == "" || chURL == "" {
 		return dto.ReturnJsonDto{Code: 0, Msg: "参数错误, 不得为空", Type: "danger"}
 	}
 
@@ -521,30 +532,39 @@ func SaveChannelsOne(params url.Values) dto.ReturnJsonDto {
 		return dto.ReturnJsonDto{Code: 0, Msg: "参数错误, 存在非法字符", Type: "danger"}
 	}
 
-	var epg models.IptvEpg
-	if err := dao.DB.Model(&models.IptvEpg{}).Where("id = ?", e_id).First(&epg).Error; err != nil {
-		return dto.ReturnJsonDto{Code: 0, Msg: "未找到对应的 EPG 记录", Type: "danger"}
-	}
-
 	var channel models.IptvChannel
 	if err := dao.DB.Model(&models.IptvChannel{}).Where("id = ?", chId).First(&channel).Error; err != nil {
 		return dto.ReturnJsonDto{Code: 0, Msg: "未找到对应的频道记录", Type: "danger"}
 	}
 
+	if e_id != "" {
+		var epg models.IptvEpg
+		if err := dao.DB.Model(&models.IptvEpg{}).Where("id = ?", e_id).First(&epg).Error; err != nil {
+			return dto.ReturnJsonDto{Code: 0, Msg: "未找到对应的 EPG 记录", Type: "danger"}
+		}
+		channel.EId = epg.ID
+		var tmpList []string
+		tmpList = append(tmpList, channel.Name)
+		epg.Content = strings.Join(until.MergeAndUnique(strings.Split(epg.Content, ","), tmpList), ",")
+
+		if err := dao.DB.Model(&models.IptvEpg{}).Where("id = ?", e_id).Save(&epg).Error; err != nil {
+			return dto.ReturnJsonDto{Code: 0, Msg: "保存EPG失败" + err.Error(), Type: "danger"}
+		}
+	} else {
+		channel.EId = 0
+	}
+
 	channel.Name = chname
 	channel.Url = chURL
-	channel.EId = epg.ID
 
-	if err := dao.DB.Model(&models.IptvChannel{}).Where("id = ?", chId).Save(&channel).Error; err != nil {
+	if err := dao.DB.Model(&models.IptvChannel{}).Where("id = ?", chId).Updates(map[string]interface{}{
+		"name": channel.Name,
+		"url":  channel.Url,
+		"e_id": channel.EId,
+	}).Error; err != nil {
 		return dto.ReturnJsonDto{Code: 0, Msg: "保存频道失败" + err.Error(), Type: "danger"}
 	}
-	var tmpList []string
-	tmpList = append(tmpList, channel.Name)
-	epg.Content = strings.Join(until.MergeAndUnique(strings.Split(epg.Content, ","), tmpList), ",")
 
-	if err := dao.DB.Model(&models.IptvEpg{}).Where("id = ?", e_id).Save(&epg).Error; err != nil {
-		return dto.ReturnJsonDto{Code: 0, Msg: "保存EPG失败" + err.Error(), Type: "danger"}
-	}
 	go until.CleanAutoCacheAll() // 清理缓存
 	return dto.ReturnJsonDto{Code: 1, Msg: "保存成功", Type: "success"}
 }
@@ -578,6 +598,7 @@ func GenreChannels(listName, srclist, ua string, listId int64, doRepeat bool) dt
 			if err := dao.DB.Create(&category).Error; err != nil {
 				return dto.ReturnJsonDto{Code: 0, Msg: fmt.Sprintf("新增分类 %s 失败\n", categoryName), Type: "danger"}
 			}
+			go until.SyncCaToEpg(category.ID)
 			a, err := until.AddChannelList(genreList, category.ID, listId, doRepeat)
 			if err != nil {
 				log.Println(fmt.Sprintf("新增分类 %s 失败\n", categoryName), err)
@@ -709,6 +730,7 @@ func UploadPayList(c *gin.Context) dto.ReturnJsonDto {
 		dao.DB.Model(&models.IptvCategory{}).Select("IFNULL(MAX(sort),0)").Scan(&maxSort)
 		var new = models.IptvCategory{Name: listName, Type: "file", Sort: maxSort + 1}
 		dao.DB.Model(&models.IptvCategory{}).Create(&new)
+		go until.SyncCaToEpg(new.ID) // 异步同步到epg
 
 		repeat, err := until.AddChannelList(urlData, new.ID, 0, false)
 		if err == nil {
@@ -758,6 +780,7 @@ func SaveCategory(params url.Values) dto.ReturnJsonDto {
 		if new.Type == "auto" {
 			go until.CleanAutoCacheAll()
 		} else {
+			go until.SyncCaToEpg(new.ID)
 			go until.CleanMealsTxtCacheAll()
 		}
 	} else {
@@ -794,6 +817,7 @@ func SaveCategory(params url.Values) dto.ReturnJsonDto {
 		dao.Cache.Delete(proxyCaCheck)
 
 		if ca.Type == "auto" {
+			go until.RemoveCaFromEpg(caIdInt)
 			go until.CleanAutoCacheAll()
 		} else {
 			go until.CleanMealsTxtCacheAll()

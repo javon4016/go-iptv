@@ -374,6 +374,11 @@ func DeleteLogo(params url.Values) dto.ReturnJsonDto {
 	return dto.ReturnJsonDto{Code: 1, Msg: "删除成功", Type: "success"}
 }
 
+func DelNotFrom() dto.ReturnJsonDto {
+	dao.DB.Where("fromlist is null").Delete(&models.IptvEpg{})
+	return dto.ReturnJsonDto{Code: 1, Msg: "删除成功", Type: "success"}
+}
+
 // func SaveEpgApi(params url.Values) dto.ReturnJsonDto {
 // 	err1000 := params.Get("tipepgerror_1000")
 // 	err1001 := params.Get("tipepgerror_1001")
