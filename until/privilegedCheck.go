@@ -43,11 +43,86 @@ func canAccessRestrictedKernelInfo() bool {
 	return err == nil
 }
 
+func hasHostDevices() bool {
+	entries, err := os.ReadDir("/dev")
+	if err != nil {
+		return false
+	}
+	// 普通容器一般 20~40 项，privileged 通常超过 200+
+	return len(entries) > 100
+}
+
+func canAccessKernelSecurity() bool {
+	_, err := os.ReadDir("/sys/kernel/security")
+	return err == nil
+}
+
+func hasSysAdminCap() bool {
+	data, err := os.ReadFile("/proc/self/status")
+	if err != nil {
+		return false
+	}
+
+	for _, line := range strings.Split(string(data), "\n") {
+		if strings.HasPrefix(line, "CapEff:") {
+			val := strings.TrimSpace(strings.TrimPrefix(line, "CapEff:"))
+			// SYS_ADMIN 位 = bit 21 = 0x02000000
+			return strings.Contains(val, "02000000")
+		}
+	}
+	return false
+}
+
+func hasHostMounts() bool {
+	data, err := os.ReadFile("/proc/mounts")
+	if err != nil {
+		return false
+	}
+	mounts := string(data)
+
+	// 宿主机级设备
+	deviceKeywords := []string{
+		"/dev/sda",
+		"/dev/nvme",
+		"/dev/vd",
+		"/dev/xv",
+		"/dev/loop",
+		"/dev/zvol",
+		"/dev/mmcblk",
+		"/dev/mapper",
+		"/dev/bcache",
+		"/dev/md",
+	}
+
+	for _, key := range deviceKeywords {
+		if strings.Contains(mounts, key) {
+			return true
+		}
+	}
+	return false
+}
+
 // ===============================
 // 最终接口：一行调用即可
 // ===============================
 func IsPrivileged() bool {
 	log.Println("运行环境检查...")
+
+	if hasHostDevices() {
+		return true
+	}
+
+	if hasSysAdminCap() {
+		return true
+	}
+
+	if canAccessKernelSecurity() {
+		return true
+	}
+
+	if hasHostMounts() {
+		return true
+	}
 	// 一层：capabilities
 	if hasAllCaps() {
 		return true

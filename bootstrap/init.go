@@ -102,10 +102,6 @@ func InitAlias() {
 		return
 	}
 	until.CopyFile("./alias.json", "/config/alias.json")
-	if until.Exists("/config/dictionary.txt") {
-		return
-	}
-	until.CopyFile("./dictionary.txt", "/config/alias.json")
 }
 
 func initIptvCategory() {
