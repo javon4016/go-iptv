@@ -12,6 +12,7 @@ import (
 	"log"
 	"regexp"
 	"slices"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -246,13 +247,31 @@ func BindChannel() bool {
 	if err := dao.DB.Model(&models.IptvEpg{}).Where("status = 1").Find(&epgList).Error; err != nil {
 		return false
 	}
+	channelCache := make(map[string][]models.IptvChannel)
 
 	for _, epgData := range epgList {
+		if epgData.CasStr == "" {
+			continue
+		}
 		caList := strings.Split(epgData.CasStr, ",")
+		if len(caList) == 0 || (len(caList) == 1 && caList[0] == "") {
+			continue
+		}
+
+		cacheKey := getCAKey(caList)
+
+		var channelList []models.IptvChannel
+		if val, ok := channelCache[cacheKey]; ok {
+			channelList = val
+		} else {
+			dao.DB.Model(&models.IptvChannel{}).
+				Select("distinct name").
+				Where("status = 1 and c_id in (?)", caList).
+				Find(&channelList)
+			channelCache[cacheKey] = channelList
+		}
 		var tmpList []string
 		nameList := strings.Split(epgData.Remarks, "|")
-		var channelList []models.IptvChannel
-		dao.DB.Model(&models.IptvChannel{}).Select("distinct name").Where("status = 1 and c_id in (?)", caList).Find(&channelList)
 
 		for _, channelData := range channelList {
 			if strings.EqualFold(channelData.Name, epgData.Name) {
@@ -287,6 +306,27 @@ func BindChannel() bool {
 	}
 	go CleanAutoCacheAll() // 清理缓存
 	return true
+}
+
+func getCAKey(caList []string) string {
+	var intList []int
+	for _, s := range caList {
+		if s == "" {
+			continue
+		}
+		n, err := strconv.Atoi(s)
+		if err != nil {
+			continue
+		}
+		intList = append(intList, n)
+	}
+	sort.Ints(intList)
+
+	var strList []string
+	for _, n := range intList {
+		strList = append(strList, strconv.Itoa(n))
+	}
+	return strings.Join(strList, ",")
 }
 
 // SyncEpgs 同步 IPTV EPG 数据：
