@@ -4,7 +4,9 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
+	"go-iptv/dao"
 	"go-iptv/models"
+	"log"
 	"math"
 	"time"
 )
@@ -50,4 +52,23 @@ func CheckUserDay(users []models.IptvUserShow) []models.IptvUserShow {
 		users[i].StatusDesc = statusDesc
 	}
 	return users
+}
+
+func PasswordReset() bool {
+	data := ReadFile("/config/reset.txt")
+	if data == "" {
+		return false
+	}
+	log.Println("尝试重置密码为:", data)
+	res := dao.DB.Model(&models.IptvAdmin{}).Where("id = 1").Update("password", HashPassword(data))
+	if res.Error != nil {
+		log.Println("密码重置失败，数据库错误:", res.Error)
+		return false
+	}
+	if res.RowsAffected == 0 {
+		log.Println("密码重置失败，没有找到管理员信息")
+		return false
+	}
+	log.Println("密码重置成功")
+	return true
 }

@@ -96,6 +96,7 @@ func main() {
 		log.Println("数据库初始化失败,请删除/config/iptv.db重新安装")
 		return
 	}
+	until.PasswordReset() // 密码重置
 
 	if !bootstrap.InitLogo() {
 		log.Println("logo目录初始化错误")
