@@ -14,60 +14,12 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
 	"time"
 )
-
-// ------------------ 更新信号 ------------------
-
-func UpdateSignal() error {
-	script := "entrypoint.sh"
-
-	cmd := exec.Command("ps", "-eo", "pid,args")
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	if err := cmd.Run(); err != nil {
-		return errors.New("更新服务查找失败")
-	}
-
-	lines := strings.Split(out.String(), "\n")
-	found := false
-
-	for _, line := range lines {
-		fields := strings.Fields(line)
-		if len(fields) < 2 {
-			continue
-		}
-		pidStr, args := fields[0], strings.Join(fields[1:], " ")
-		if strings.Contains(args, script) {
-			pid, err := strconv.Atoi(pidStr)
-			if err != nil {
-				continue
-			}
-
-			proc, err := os.FindProcess(pid)
-			if err != nil {
-				continue
-			}
-
-			if err := proc.Signal(syscall.SIGUSR1); err != nil {
-				return errors.New("更新信号发送失败")
-			}
-
-			log.Println("更新信号发送成功,更新中请稍候...")
-			found = true
-		}
-	}
-
-	if !found {
-		return errors.New("未找到更新监测脚本进程")
-	}
-	return nil
-}
-
-// ------------------ GitHub Release 版本 ------------------
 
 type githubRelease struct {
 	TagName     string    `json:"tag_name"`
@@ -79,43 +31,52 @@ type githubRelease struct {
 	} `json:"assets"`
 }
 
-func isNewer(newVer, oldVer string) bool {
-	newVer = strings.TrimPrefix(newVer, "v")
-	oldVer = strings.TrimPrefix(oldVer, "v")
+// ------------------------------------------------------------
+// 更新信号
+// ------------------------------------------------------------
 
-	newParts := strings.Split(newVer, ".")
-	oldParts := strings.Split(oldVer, ".")
+func UpdateSignal() error {
+	target := "entrypoint.sh"
 
-	for len(newParts) < 4 {
-		newParts = append(newParts, "0")
+	cmd := exec.Command("ps", "-eo", "pid,args")
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	if err := cmd.Run(); err != nil {
+		return errors.New("进程列表获取失败")
 	}
-	for len(oldParts) < 4 {
-		oldParts = append(oldParts, "0")
-	}
 
-	for i := 0; i < 4; i++ {
-		var n, o int
-		fmt.Sscanf(newParts[i], "%d", &n)
-		fmt.Sscanf(oldParts[i], "%d", &o)
-		if n > o {
-			return true
+	lines := strings.Split(out.String(), "\n")
+	for _, line := range lines {
+		fs := strings.Fields(line)
+		if len(fs) < 2 {
+			continue
 		}
-		if n < o {
-			return false
+		pidStr := fs[0]
+		args := strings.Join(fs[1:], " ")
+
+		if strings.Contains(args, target) {
+			pid, _ := strconv.Atoi(pidStr)
+			p, _ := os.FindProcess(pid)
+			if err := p.Signal(syscall.SIGUSR1); err != nil {
+				return errors.New("更新信号发送失败")
+			}
+			log.Println("已发送更新信号")
+			return nil
 		}
 	}
-	return false
+	return errors.New("未找到更新监测进程")
 }
+
+// ------------------------------------------------------------
+// 获取 release
+// ------------------------------------------------------------
 
 func fetchLatestStableRelease(owner, repo string) (*githubRelease, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases", owner, repo)
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
-	if err != nil {
-		return nil, err
-	}
+	req, _ := http.NewRequestWithContext(ctx, "GET", url, nil)
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 
 	resp, err := http.DefaultClient.Do(req)
@@ -123,10 +84,6 @@ func fetchLatestStableRelease(owner, repo string) (*githubRelease, error) {
 		return nil, err
 	}
 	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("无法获取版本信息，HTTP 状态码：%d", resp.StatusCode)
-	}
 
 	var releases []githubRelease
 	if err := json.NewDecoder(resp.Body).Decode(&releases); err != nil {
@@ -142,132 +99,233 @@ func fetchLatestStableRelease(owner, repo string) (*githubRelease, error) {
 			latest = &r
 		}
 	}
-
 	if latest == nil {
-		return nil, errors.New("未找到正式版本发布")
+		return nil, errors.New("无正式版")
 	}
 	return latest, nil
 }
 
-// 检查远端版本是否比本地新
-func CheckNewVer(untilVersion string) (bool, string, error) {
+// ------------------------------------------------------------
+// CheckNewVer
+// ------------------------------------------------------------
+
+func isNewer(newVer, oldVer string) bool {
+	newVer = strings.TrimPrefix(newVer, "v")
+	oldVer = strings.TrimPrefix(oldVer, "v")
+
+	np := strings.Split(newVer, ".")
+	op := strings.Split(oldVer, ".")
+	for len(np) < 4 {
+		np = append(np, "0")
+	}
+	for len(op) < 4 {
+		op = append(op, "0")
+	}
+
+	for i := 0; i < 4; i++ {
+		var a, b int
+		fmt.Sscanf(np[i], "%d", &a)
+		fmt.Sscanf(op[i], "%d", &b)
+		if a > b {
+			return true
+		}
+		if a < b {
+			return false
+		}
+	}
+	return false
+}
+
+func CheckNewVer(local string) (bool, string, error) {
 	latest, err := fetchLatestStableRelease("wz1st", "go-iptv")
 	if err != nil {
 		return false, "", err
 	}
-	return isNewer(latest.TagName, untilVersion), latest.TagName, nil
+	return isNewer(latest.TagName, local), latest.TagName, nil
 }
 
-// ------------------ 下载与校验 ------------------
+// ------------------------------------------------------------
+// 下载
+// ------------------------------------------------------------
 
-func downloadFile(url, filename string) error {
+func downloadFile(url, dst string) error {
+	if url == "" {
+		return fmt.Errorf("下载URL为空")
+	}
+
 	resp, err := http.Get(url)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("下载 %s 返回状态 %s", url, resp.Status)
-	}
-
-	out, err := os.Create(filename)
+	f, err := os.Create(dst)
 	if err != nil {
 		return err
 	}
-	defer out.Close()
+	defer f.Close()
 
-	_, err = io.Copy(out, resp.Body)
+	_, err = io.Copy(f, resp.Body)
 	return err
 }
 
-func fileSHA256(filename string) (string, error) {
-	f, err := os.Open(filename)
+// ------------------------------------------------------------
+// SHA
+// ------------------------------------------------------------
+
+func fileSHA256(path string) (string, error) {
+	f, err := os.Open(path)
 	if err != nil {
 		return "", err
 	}
 	defer f.Close()
 
 	h := sha256.New()
-	if _, err := io.Copy(h, f); err != nil {
-		return "", err
-	}
+	io.Copy(h, f)
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
-func verifySHA256(file string, sums map[string]string) bool {
-	hash, err := fileSHA256(file)
+func loadSums(file string) map[string]string {
+	r := map[string]string{}
+
+	f, err := os.Open(file)
 	if err != nil {
-		return false
-	}
-	expected, ok := sums[file]
-	if !ok {
-		return false
-	}
-	return strings.EqualFold(hash, expected)
-}
-
-// 下载并校验最新 Release 文件，arch 用于选择 iptv 和 license
-func DownloadAndVerify(arch string) (bool, string, error) {
-	release, err := fetchLatestStableRelease("wz1st", "go-iptv")
-	if err != nil {
-		return false, "", err
-	}
-
-	log.Println("最新版本:", release.TagName)
-
-	iptvFile := fmt.Sprintf("iptv_%s", arch)
-	licenseFile := fmt.Sprintf("license_%s", arch)
-	files := []string{iptvFile, licenseFile, "updata.sh", "SHA256SUMS.txt"}
-	fileURLs := make(map[string]string)
-
-	for _, asset := range release.Assets {
-		for _, fname := range files {
-			if asset.Name == fname {
-				fileURLs[fname] = asset.BrowserDownloadURL
-			}
-		}
-	}
-
-	for _, f := range files {
-		if _, ok := fileURLs[f]; !ok {
-			return false, "", fmt.Errorf("%s 不存在于 release", f)
-		}
-	}
-
-	// 下载文件
-	for _, f := range files {
-		fmt.Println("下载:", f)
-		if err := downloadFile(fileURLs[f], f); err != nil {
-			return false, "", fmt.Errorf("下载 %s 失败: %v", f, err)
-		}
-	}
-
-	// 读取 SHA256SUMS.txt
-	sumsFile := "SHA256SUMS.txt"
-	sums := make(map[string]string)
-	f, err := os.Open(sumsFile)
-	if err != nil {
-		return false, "", err
+		return r
 	}
 	defer f.Close()
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		line := scanner.Text()
-		parts := strings.Fields(line)
-		if len(parts) != 2 {
-			continue
+
+	sc := bufio.NewScanner(f)
+	for sc.Scan() {
+		p := strings.Fields(sc.Text())
+		if len(p) == 2 {
+			r[p[1]] = p[0]
 		}
-		sums[parts[1]] = parts[0]
+	}
+	return r
+}
+
+// ------------------------------------------------------------
+// cp
+// ------------------------------------------------------------
+
+func copyFile(src, dst string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+
+	out, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	_, err = io.Copy(out, in)
+	return err
+}
+
+// ------------------------------------------------------------
+// 主逻辑
+// ------------------------------------------------------------
+
+func DownloadAndVerify(arch string) (bool, string, error) {
+
+	rel, err := fetchLatestStableRelease("wz1st", "go-iptv")
+	if err != nil {
+		return false, "", err
 	}
 
-	// 校验文件 SHA256
-	for _, f := range []string{iptvFile, licenseFile, "updata.sh"} {
-		if ok := verifySHA256(f, sums); !ok {
+	downDir := "/tmp/down"
+	upDir := "/config/updata"
+
+	os.MkdirAll(downDir, 0755)
+	os.MkdirAll(upDir, 0755)
+
+	iptv := "iptv_" + arch
+	license := "license_" + arch
+
+	required := []string{iptv, license}
+	optional := []string{"updata.sh"}
+	sumFile := "SHA256SUMS.txt"
+
+	urlMap := map[string]string{}
+	for _, a := range rel.Assets {
+		urlMap[a.Name] = a.BrowserDownloadURL
+	}
+
+	// --------------------------------
+	// 1) 总是先下载 SHA256SUMS.txt
+	// --------------------------------
+	if err := downloadFile(urlMap[sumFile], filepath.Join(downDir, sumFile)); err != nil {
+		return false, "", err
+	}
+
+	sums := loadSums(filepath.Join(downDir, sumFile))
+
+	// --------------------------------
+	// 2) 有文件 → 校验
+	// --------------------------------
+	need := []string{}
+
+	for _, f := range append(required, optional...) {
+		local := filepath.Join(downDir, f)
+		if _, err := os.Stat(local); err == nil {
+			if verifySHA(local, sums) {
+				continue
+			}
+		}
+		need = append(need, f)
+	}
+
+	// --------------------------------
+	// 3) 下载缺失/校验失败的
+	// --------------------------------
+	for _, f := range need {
+		u := urlMap[f]
+		if u == "" {
+			continue
+		}
+		if err := downloadFile(u, filepath.Join(downDir, f)); err != nil {
+			return false, "", err
+		}
+	}
+
+	// --------------------------------
+	// 4) 最终校验必需
+	// --------------------------------
+	for _, f := range required {
+		p := filepath.Join(downDir, f)
+		if !verifySHA(p, sums) {
 			return false, "", fmt.Errorf("%s 校验失败", f)
 		}
 	}
 
-	fmt.Println("所有文件下载并校验通过")
-	return true, release.TagName, nil
+	// --------------------------------
+	// 5) 删除旧
+	// --------------------------------
+	os.Remove(filepath.Join(upDir, "iptv"))
+	os.Remove(filepath.Join(upDir, "license"))
+	// os.Remove(filepath.Join(upDir, "updata.sh"))
+
+	// --------------------------------
+	// 6) 覆盖 + 去掉_arch
+	// --------------------------------
+	cp := func(f string) {
+		src := filepath.Join(downDir, f)
+		if _, err := os.Stat(src); err == nil {
+			dst := filepath.Join(upDir, strings.Replace(f, "_"+arch, "", 1))
+			copyFile(src, dst)
+		}
+	}
+	cp(iptv)
+	cp(license)
+	cp("updata.sh")
+
+	return true, rel.TagName, nil
+}
+
+func verifySHA(p string, sums map[string]string) bool {
+	h, _ := fileSHA256(p)
+	return strings.EqualFold(h, sums[filepath.Base(p)])
 }

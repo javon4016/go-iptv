@@ -1279,6 +1279,8 @@ function updata(){
 							text: '确认',
 							btnClass: 'btn-danger',
 							action: function () {
+								lightyear.notify("更新下载中", data.type, 1000);
+								lightyear.loading('show');
 								$.ajax({
 									url: "/admin/updata/down",
 									type: "GET", 
@@ -1287,13 +1289,14 @@ function updata(){
 											lightyear.loading('hide');
 											$.confirm({
 												title: '确认升级',
-												content: '新版本'+data.msg +'，是否升级？',
+												content: '新版本'+data.msg +' 下载完成，是否升级？',
 												type: 'green',
 												buttons: {
 													confirm: {
 														text: '确认',
 														btnClass: 'btn-danger',
 														action: function () {
+															lightyear.loading('show');
 															$.ajax({
 																url: "/admin/updata/updata",
 																type: "GET", 
