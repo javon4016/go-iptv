@@ -4,13 +4,11 @@ import (
 	"encoding/json"
 	"go-iptv/dao"
 	"log"
-	"time"
 )
 
 func InitLicense() {
-	dao.StartLicense()
+	// dao.StartLicense()
 	log.Println("license初始化中")
-	time.Sleep(time.Second * 3)
 	ws, err := dao.ConLicense("ws://127.0.0.1:81/ws")
 	if err != nil {
 		log.Println("license初始化错误")

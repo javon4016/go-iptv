@@ -210,6 +210,7 @@ func CheckJava() bool {
 	cmd := exec.Command("java", "-version")
 	output, err := cmd.CombinedOutput()
 
+	log.Println("11111111111")
 	if err != nil {
 		log.Println("Java版本检查失败:", err)
 		return false

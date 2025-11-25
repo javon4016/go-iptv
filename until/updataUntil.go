@@ -2,7 +2,6 @@ package until
 
 import (
 	"bufio"
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -10,14 +9,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
+	"net"
 	"net/http"
+	"net/url"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
-	"syscall"
 	"time"
 )
 
@@ -36,35 +33,17 @@ type githubRelease struct {
 // ------------------------------------------------------------
 
 func UpdateSignal() error {
-	target := "entrypoint.sh"
+	res, err := http.Get("http://127.0.0.1:82/update")
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
 
-	cmd := exec.Command("ps", "-eo", "pid,args")
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	if err := cmd.Run(); err != nil {
-		return errors.New("进程列表获取失败")
+	if res.StatusCode != http.StatusOK {
+		return fmt.Errorf("更新请求失败，状态码: %d", res.StatusCode)
 	}
 
-	lines := strings.Split(out.String(), "\n")
-	for _, line := range lines {
-		fs := strings.Fields(line)
-		if len(fs) < 2 {
-			continue
-		}
-		pidStr := fs[0]
-		args := strings.Join(fs[1:], " ")
-
-		if strings.Contains(args, target) {
-			pid, _ := strconv.Atoi(pidStr)
-			p, _ := os.FindProcess(pid)
-			if err := p.Signal(syscall.SIGUSR1); err != nil {
-				return errors.New("更新信号发送失败")
-			}
-			log.Println("已发送更新信号")
-			return nil
-		}
-	}
-	return errors.New("未找到更新监测进程")
+	return nil
 }
 
 // ------------------------------------------------------------
@@ -148,25 +127,69 @@ func CheckNewVer(local string) (bool, string, error) {
 // 下载
 // ------------------------------------------------------------
 
-func downloadFile(url, dst string) error {
-	if url == "" {
+func downloadFile(urlStr, dst string) error {
+	if urlStr == "" {
 		return fmt.Errorf("下载URL为空")
 	}
 
-	resp, err := http.Get(url)
-	if err != nil {
-		return err
+	// 设置 Transport，限制连接超时、TLS握手超时、响应头超时
+	tr := &http.Transport{
+		DialContext: (&net.Dialer{
+			Timeout:   10 * time.Second, // 连接超时
+			KeepAlive: 30 * time.Second,
+		}).DialContext,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ResponseHeaderTimeout: 15 * time.Second, // 等待响应头超时
 	}
-	defer resp.Body.Close()
 
-	f, err := os.Create(dst)
-	if err != nil {
-		return err
+	// 如果存在 PROXY 环境变量，设置代理
+	if proxyEnv := os.Getenv("PROXY"); proxyEnv != "" {
+		proxyURL, err := url.Parse(proxyEnv)
+		if err != nil {
+			return fmt.Errorf("代理URL无效: %v", err)
+		}
+		tr.Proxy = http.ProxyURL(proxyURL)
 	}
-	defer f.Close()
 
-	_, err = io.Copy(f, resp.Body)
-	return err
+	client := &http.Client{
+		Transport: tr,
+		Timeout:   0, // 不限制整个下载总时间
+	}
+
+	maxRetries := 3
+	var lastErr error
+	for i := 0; i < maxRetries; i++ {
+		resp, err := client.Get(urlStr)
+		if err != nil {
+			lastErr = err
+			time.Sleep(time.Second * time.Duration(i+1))
+			continue
+		}
+
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			lastErr = fmt.Errorf("下载失败，状态码: %d", resp.StatusCode)
+			time.Sleep(time.Second * time.Duration(i+1))
+			continue
+		}
+
+		f, err := os.Create(dst)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+
+		_, err = io.Copy(f, resp.Body)
+		if err != nil {
+			lastErr = err
+			time.Sleep(time.Second * time.Duration(i+1))
+			continue
+		}
+
+		return nil // 下载成功
+	}
+
+	return fmt.Errorf("下载失败: %v", lastErr)
 }
 
 // ------------------------------------------------------------
@@ -247,11 +270,16 @@ func DownloadAndVerify(arch string) (bool, string, error) {
 
 	required := []string{iptv, license}
 	optional := []string{"updata.sh"}
+	verFile := "Version"
 	sumFile := "SHA256SUMS.txt"
 
 	urlMap := map[string]string{}
 	for _, a := range rel.Assets {
 		urlMap[a.Name] = a.BrowserDownloadURL
+	}
+
+	if err := downloadFile(urlMap[verFile], filepath.Join(downDir, verFile)); err != nil {
+		return false, "", err
 	}
 
 	// --------------------------------
@@ -306,6 +334,7 @@ func DownloadAndVerify(arch string) (bool, string, error) {
 	// --------------------------------
 	os.Remove(filepath.Join(upDir, "iptv"))
 	os.Remove(filepath.Join(upDir, "license"))
+	os.Remove(filepath.Join(upDir, "Version"))
 	// os.Remove(filepath.Join(upDir, "updata.sh"))
 
 	// --------------------------------
@@ -321,6 +350,7 @@ func DownloadAndVerify(arch string) (bool, string, error) {
 	cp(iptv)
 	cp(license)
 	cp("updata.sh")
+	cp(verFile)
 
 	return true, rel.TagName, nil
 }

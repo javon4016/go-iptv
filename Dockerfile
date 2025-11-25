@@ -8,13 +8,13 @@ COPY . .
 
 # 根据架构复制对应 license 文件
 RUN case "$TARGETARCH" in \
-      amd64) cp ./license_all/license_amd64 ./license && cp ./iptv_dist/iptv_amd64 /app/iptv ;; \
-      arm64) cp ./license_all/license_arm64 ./license && cp ./iptv_dist/iptv_arm64 /app/iptv  ;; \
-      arm)  cp ./license_all/license_arm ./license && cp ./iptv_dist/iptv_arm /app/iptv  ;; \
+      amd64) cp ./license_all/license_amd64 ./license && cp ./iptv_dist/iptv_amd64 /app/iptv && cp ./start_all/start_amd64 /app/start ;; \
+      arm64) cp ./license_all/license_arm64 ./license && cp ./iptv_dist/iptv_arm64 /app/iptv && cp ./start_all/start_arm64 /app/start  ;; \
+      arm)  cp ./license_all/license_arm ./license && cp ./iptv_dist/iptv_arm /app/iptv  && cp ./start_all/start_arm /app/start  ;; \
       *) echo "未知架构: $TARGETARCH" && exit 1 ;; \
     esac
 
-RUN chmod +x /app/iptv /app/license
+RUN chmod +x /app/iptv /app/license /app/start
 
 FROM alpine:latest
 
@@ -37,11 +37,11 @@ COPY ./ChangeLog.md /app/ChangeLog.md
 COPY ./Version /app/Version
 COPY ./alias.json /app/alias.json
 COPY ./dictionary.txt /app/dictionary.txt
-COPY ./entrypoint.sh /app/entrypoint.sh
 
-RUN chmod 777 -R /usr/bin/apktool*  /app/entrypoint.sh
+RUN chmod 777 -R /usr/bin/apktool*
 
 COPY --from=builder /app/iptv .
 COPY --from=builder /app/license .
+COPY --from=builder /app/start .
 
-CMD ["./entrypoint.sh"]
+CMD ["./start"]

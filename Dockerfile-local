@@ -36,11 +36,9 @@ COPY ./ChangeLog.md /app/ChangeLog.md
 COPY ./Version /app/Version
 COPY ./alias.json /app/alias.json
 COPY ./dictionary.txt /app/dictionary.txt
-COPY ./entrypoint.sh /app/entrypoint.sh
-
-RUN chmod 777 -R /usr/bin/apktool*  /app/entrypoint.sh
 
 COPY --from=builder /app/iptv .
 COPY ./license .
+COPY ./start .
 
-CMD ["./entrypoint.sh"]
+CMD ["./start"]
