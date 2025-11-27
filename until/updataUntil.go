@@ -91,6 +91,9 @@ func fetchLatestStableRelease(owner, repo string) (*githubRelease, error) {
 // ------------------------------------------------------------
 
 func isNewer(newVer, oldVer string, vLen int) (bool, error) {
+	if newVer == oldVer {
+		return false, nil
+	}
 	newVer = strings.TrimPrefix(newVer, "v")
 	oldVer = strings.TrimPrefix(oldVer, "v")
 

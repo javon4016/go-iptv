@@ -65,11 +65,19 @@ func UpdataCheck() dto.ReturnJsonDto {
 	}
 	a, newWeb, err1 := until.CheckNewVerWeb(oldWeb)
 	b, newLic, err2 := until.CheckNewVerLic(oldLic)
-	if err1 != nil && err2 != nil {
-		return dto.ReturnJsonDto{Code: 0, Msg: "检查更新失败: " + err1.Error() + err2.Error(), Type: "danger"}
+
+	var msg string
+	if err1 != nil || err2 != nil {
+		if err1 != nil {
+			msg += err1.Error() + " "
+		}
+		if err2 != nil {
+			msg += err2.Error() + " "
+		}
+		return dto.ReturnJsonDto{Code: 0, Msg: "检查更新失败: " + msg, Type: "danger"}
 	}
 	if a || b {
-		var msg string
+
 		if a {
 			msg += "管理系统有新版本: " + newWeb + " "
 		}
