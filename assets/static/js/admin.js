@@ -680,8 +680,6 @@ function getChannelsTxt(btn){
 				var result = "";
 				var purls = "";
 				if (!data.data || data.data.length === 0) {
-					$("#srclist").val("暂无数据");
-					$("#plist").val("暂无数据");
 					return;
 				}
 				data.data.forEach(item => {
