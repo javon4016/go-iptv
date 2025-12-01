@@ -112,7 +112,7 @@ func isNewer(newVer, oldVer string, vLen int) (bool, error) {
 		fmt.Sscanf(op[i], "%d", &b)
 		if a > b {
 			if (i <= 1 && vLen == 4) || (i == 0 && vLen == 3) {
-				return false, errors.New("版本更新内容较大或基础镜像更新，不支持在线升级，请手动下载更新")
+				return true, errors.New("新版本 " + newVer + " 更新内容较大或基础镜像更新，不支持在线升级，请手动更新镜像")
 			}
 			return true, nil
 		}

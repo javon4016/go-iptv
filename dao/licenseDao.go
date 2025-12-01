@@ -150,6 +150,9 @@ func (c *WSClient) reconnect() {
 
 // 发送 JSON 并接收响应
 func (c *WSClient) SendWS(req Request) (Response, error) {
+	if !c.IsOnline() {
+		return Response{}, fmt.Errorf("引擎未启动")
+	}
 	c.lock.Lock()
 	defer c.lock.Unlock()
 

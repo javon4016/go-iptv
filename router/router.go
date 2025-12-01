@@ -109,6 +109,10 @@ func InitRouter(debug bool) *gin.Engine {
 		c.HTML(http.StatusOK, templateName, pageData)
 	})
 
+	r.GET("/version", func(c *gin.Context) {
+		c.String(http.StatusOK, until.GetVersion())
+	})
+
 	r.GET("/ChangeLog.md", func(c *gin.Context) {
 		var pageData dto.IndexDto
 		data, _ := os.ReadFile("/app/ChangeLog.md")

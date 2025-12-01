@@ -53,55 +53,63 @@ func Admins(params url.Values) dto.ReturnJsonDto {
 	// TODO
 }
 
-func UpdataCheck() dto.ReturnJsonDto {
+func UpdataCheckWeb() dto.ReturnJsonDto {
 	oldWeb := until.GetVersion()
-	var oldLic string
-	verJson, err := dao.WS.SendWS(dao.Request{Action: "getVersion"})
-	if err == nil {
-		if err := json.Unmarshal(verJson.Data, &oldLic); err != nil {
-			log.Println("版本信息解析错误:", err)
-			return dto.ReturnJsonDto{Code: 0, Msg: "引擎版本信息解析错误，请检查引擎是否正常", Type: "danger"}
-		}
-	}
-	a, newWeb, err1 := until.CheckNewVerWeb(oldWeb)
-	b, newLic, err2 := until.CheckNewVerLic(oldLic)
 
-	var msg string
-	if err1 != nil || err2 != nil {
-		if err1 != nil {
-			msg += err1.Error() + " "
-		}
-		if err2 != nil {
-			msg += err2.Error() + " "
-		}
-		return dto.ReturnJsonDto{Code: 0, Msg: "检查更新失败: " + msg, Type: "danger"}
-	}
-	if a || b {
+	up, newWeb, err := until.CheckNewVerWeb(oldWeb)
 
-		if a {
-			msg += "管理系统有新版本: " + newWeb + " "
+	if err != nil {
+		if up {
+			return dto.ReturnJsonDto{Code: 0, Msg: err.Error(), Type: "success"}
 		}
-		if b {
-			msg += "引擎有新版本: " + newLic + " "
-		}
-		return dto.ReturnJsonDto{Code: 1, Msg: msg, Type: "success"}
+		return dto.ReturnJsonDto{Code: 0, Msg: "检查更新失败: " + err.Error(), Type: "danger"}
+	}
+	if up {
+		return dto.ReturnJsonDto{Code: 1, Msg: "管理系统有新版本: " + newWeb, Type: "success"}
 	}
 	return dto.ReturnJsonDto{Code: 2, Msg: "当前已是最新版本", Type: "success"}
 }
 
-func UpdataDown() dto.ReturnJsonDto {
-	a, newWeb, _ := until.DownloadAndVerifyWeb(runtime.GOARCH)
-	b, newLic, _ := until.DownloadAndVerifyLic(runtime.GOARCH)
+func UpdataCheckLic() dto.ReturnJsonDto {
+	var oldLic string
+	verJson, err := dao.WS.SendWS(dao.Request{Action: "getVersion"})
 
-	if a || b {
-		var msg string
-		if a {
-			msg += "管理系统新版本: " + newWeb + " "
-		}
-		if b {
-			msg += "引擎新版本: " + newLic + " "
-		}
-		return dto.ReturnJsonDto{Code: 1, Msg: msg, Type: "success"}
+	if err != nil {
+		return dto.ReturnJsonDto{Code: 0, Msg: "检查更新失败: " + err.Error(), Type: "danger"}
+	}
+	if err := json.Unmarshal(verJson.Data, &oldLic); err != nil {
+		log.Println("版本信息解析错误:", err)
+		return dto.ReturnJsonDto{Code: 0, Msg: "引擎版本信息解析错误，请检查引擎是否正常", Type: "danger"}
+	}
+	up, newLic, err := until.CheckNewVerLic(oldLic)
+
+	if err != nil {
+		return dto.ReturnJsonDto{Code: 0, Msg: "检查更新失败: " + err.Error(), Type: "danger"}
+	}
+	if up {
+		return dto.ReturnJsonDto{Code: 1, Msg: "引擎有新版本: " + newLic, Type: "success"}
+	}
+	return dto.ReturnJsonDto{Code: 2, Msg: "当前已是最新版本", Type: "success"}
+}
+
+func UpdataDownWeb() dto.ReturnJsonDto {
+	up, newWeb, err := until.DownloadAndVerifyWeb(runtime.GOARCH)
+	if err != nil {
+		return dto.ReturnJsonDto{Code: 0, Msg: "下载失败: " + err.Error(), Type: "danger"}
+	}
+	if up {
+		return dto.ReturnJsonDto{Code: 1, Msg: "管理系统新版本: " + newWeb, Type: "success"}
+	}
+	return dto.ReturnJsonDto{Code: 0, Msg: "下载失败", Type: "danger"}
+}
+
+func UpdataDownLic() dto.ReturnJsonDto {
+	up, newLic, err := until.DownloadAndVerifyLic(runtime.GOARCH)
+	if err != nil {
+		return dto.ReturnJsonDto{Code: 0, Msg: "下载失败: " + err.Error(), Type: "danger"}
+	}
+	if up {
+		return dto.ReturnJsonDto{Code: 1, Msg: "引擎新版本: " + newLic, Type: "success"}
 	}
 	return dto.ReturnJsonDto{Code: 0, Msg: "下载失败", Type: "danger"}
 }

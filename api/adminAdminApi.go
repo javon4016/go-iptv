@@ -20,22 +20,40 @@ func Admins(c *gin.Context) {
 	c.JSON(200, service.Admins(params))
 }
 
-func UpdataCheck(c *gin.Context) {
+func UpdataCheckWeb(c *gin.Context) {
 	_, ok := until.GetAuthName(c)
 	if !ok {
 		c.JSON(200, dto.NewAdminRedirectDto())
 		return
 	}
-	c.JSON(200, service.UpdataCheck())
+	c.JSON(200, service.UpdataCheckWeb())
 }
 
-func UpdataDown(c *gin.Context) {
+func UpdataCheckLic(c *gin.Context) {
 	_, ok := until.GetAuthName(c)
 	if !ok {
 		c.JSON(200, dto.NewAdminRedirectDto())
 		return
 	}
-	c.JSON(200, service.UpdataDown())
+	c.JSON(200, service.UpdataCheckLic())
+}
+
+func UpdataDownWeb(c *gin.Context) {
+	_, ok := until.GetAuthName(c)
+	if !ok {
+		c.JSON(200, dto.NewAdminRedirectDto())
+		return
+	}
+	c.JSON(200, service.UpdataDownWeb())
+}
+
+func UpdataDownLic(c *gin.Context) {
+	_, ok := until.GetAuthName(c)
+	if !ok {
+		c.JSON(200, dto.NewAdminRedirectDto())
+		return
+	}
+	c.JSON(200, service.UpdataDownLic())
 }
 
 func Updata(c *gin.Context) {

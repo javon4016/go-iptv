@@ -48,8 +48,8 @@ func Channels(c *gin.Context) {
 			res = service.CategoryChangeStatus(params)
 		case "categoryListStatus":
 			res = service.CategoryListChangeStatus(params)
-		case "channelsStatus":
-			res = service.ChannelsChangeStatus(params)
+		// case "channelsStatus":
+		// 	res = service.ChannelsChangeStatus(params)
 		case "saveCa":
 			res = service.SaveCategory(params)
 		case "testResolutionOne":

@@ -679,25 +679,16 @@ function getChannelsTxt(btn){
 			if (data.type === "success") {
 				var result = "";
 				var purls = "";
-				var checksHtml = "";
 				if (!data.data || data.data.length === 0) {
 					return;
 				}
 				data.data.forEach(item => {
-					result += item.name + "," + item.url + "\n";
+					result += item.status + "|" + item.name + "," + item.url + "\n";
 					if (item.purl != "" && item.purl != null && item.status == 1){
-						purls += item.name + "," + item.purl + "\n";
+						purls += item.status + "|" + item.name + "," + item.purl + "\n";
 					}
-					checksHtml +=
-						'<label class="lyear-checkbox checkbox-primary">' +
-							'<input type="checkbox" onchange="updateChannelStatus(this)" name="chid" value="' + item.id + '" ' +
-								(item.status == 1 ? 'checked' : '') +
-							'>' +
-							'<span></span>' +
-						'</label>';
 				});
 				$("#srclist").val(result);
-				$("#chchecks").html(checksHtml);
 				if (purls != ""){
 					$("#plist").val(purls);
 				}else {
@@ -712,72 +703,39 @@ function getChannelsTxt(btn){
 	});
 }
 
-function updateChannelStatus(checkbox) {
-    var $cb = $(checkbox);
-    var id = $cb.val();                      // 对应 item.id
-    var status = $cb.is(":checked") ? 1 : 0; // 当前状态
-
-    // 发起 AJAX 请求
-    $.ajax({
-        url: "/admin/channels",   // 后端接口
-        method: "POST",
-        data: { channelsStatus: id },
-        success: function(res) {
-			lightyear.notify(res.msg, res.type, 3000);
-            if (res.code != 1) {
-                $cb.prop("checked", !status);
-            }
-        },
-        error: function(err) {
-            lightyear.notify("请求失败", "danger", 3000);
-            // 恢复 checkbox 状态
-            $cb.prop("checked", !status);
-        }
-    });
-}
-
 function copyCh() {
     var srclist = document.getElementById("srclist");
     var plist = document.getElementById("plist");
-    var textToCopy = "";
 
-    if (srclist.style.display === "none") {
-        // srclist 隐藏 → 复制 plist 全部内容
-        textToCopy = plist.value;
-        if (!textToCopy || textToCopy.trim() === "未授权或未开启代理") {
-            lightyear.notify("没有可用的频道", "danger", 1000);
-            return;
-        }
-    } else {
-        // srclist 显示 → 原逻辑只复制已勾选行
-        var lines = srclist.value.split("\n"); 
-        var checkboxes = document.querySelectorAll("#chchecks input[type='checkbox']");
-        var selectedLines = [];
+    // 根据显示状态决定使用哪个 textarea
+    var sourceText = (srclist.style.display === "none")
+        ? plist.value || ""
+        : srclist.value || "";
 
-        checkboxes.forEach(function(cb, index) {
-            if (cb.checked) {
-                selectedLines.push(lines[index]);
-            }
-        });
+    // 提取以“1|”开头的行，并去掉“1|”
+    var filtered = sourceText
+        .split("\n")
+        .map(function (l) { return l.trim(); })
+        .filter(function (l) { return l.startsWith("1|"); })
+        .map(function (l) { return l.substring(2); });
 
-        if (selectedLines.length === 0) {
-            lightyear.notify("没有可用的频道", "danger", 1000);
-            return;
-        }
-
-        textToCopy = selectedLines.join("\n");
+    if (filtered.length === 0) {
+        lightyear.notify("没有符合条件的频道", "danger", 1000);
+        return;
     }
+
+    var outText = filtered.join("\n");
 
     // 使用临时 textarea 复制
     var tmp = document.createElement("textarea");
-    tmp.value = textToCopy;
+    tmp.value = outText;
     document.body.appendChild(tmp);
     tmp.select();
 
     try {
         var successful = document.execCommand('copy');
         if (successful) {
-            lightyear.notify("已复制 " + textToCopy.split("\n").length + " 行", "success", 1000);
+            lightyear.notify("已复制 " + filtered.length + " 行", "success", 1000);
         } else {
             lightyear.notify("复制失败", "danger", 1000);
         }
@@ -788,6 +746,7 @@ function copyCh() {
 
     document.body.removeChild(tmp);
 }
+
 
 
 function resetShowUrl() {
@@ -805,14 +764,10 @@ function changeShowUrl(btn) {
     const proxy = document.getElementById("plist");
 
     if (src.style.display === "none") {
-        // 显示原始地址
-		$("#chchecks").show();
         src.style.display = "";
         proxy.style.display = "none";
         btn.innerText = "切换代理地址";
     } else {
-		$("#chchecks").hide();
-        // 显示代理地址
         src.style.display = "none";
         proxy.style.display = "";
         btn.innerText = "切换原始地址";
@@ -1355,7 +1310,7 @@ function resEng() {
 function updata(){
 	lightyear.loading('show');
 	$.ajax({
-        url: "/admin/updata/check",
+        url: "/admin/updata/checkWeb",
         type: "GET",
         success: function (data) {
             if (data.code === 1) {
@@ -1372,7 +1327,7 @@ function updata(){
 								lightyear.notify("更新下载中", data.type, 1000);
 								lightyear.loading('show');
 								$.ajax({
-									url: "/admin/updata/down",
+									url: "/admin/updata/downWeb",
 									type: "GET", 
 									success: function (data) {
 									    if (data.code === 1) {
@@ -1411,6 +1366,88 @@ function updata(){
 										} else {
 											lightyear.loading('hide');
 											lightyear.notify(data.msg, data.type, 1000);
+										}
+									}
+								});
+							}
+						},
+						cancel: {
+							text: '取消',
+							btnClass: 'btn-success'
+						}
+					}
+				});
+            } else {
+				lightyear.loading('hide');
+                lightyear.notify(data.msg, data.type, 3000);
+            }
+        },
+        error: function () {
+			lightyear.loading('hide');
+            lightyear.notify("操作失败", 'danger', 1000);
+        }
+    });
+}
+
+function updatalic(){
+	lightyear.loading('show');
+	$.ajax({
+        url: "/admin/updata/checkLic",
+        type: "GET",
+        success: function (data) {
+            if (data.code === 1) {
+				lightyear.loading('hide');
+                $.confirm({
+					title: '确认升级',
+					content: data.msg +'，是否下载？',
+					type: 'green',
+					buttons: {
+						confirm: {
+							text: '确认',
+							btnClass: 'btn-danger',
+							action: function () {
+								lightyear.notify("更新下载中", data.type, 1000);
+								lightyear.loading('show');
+								$.ajax({
+									url: "/admin/updata/downLic",
+									type: "GET", 
+									success: function (data) {
+									    if (data.code === 1) {
+											lightyear.loading('hide');
+											$.confirm({
+												title: '确认升级',
+												content: data.msg +' 下载完成，是否升级？',
+												type: 'green',
+												buttons: {
+													confirm: {
+														text: '确认',
+														btnClass: 'btn-danger',
+														action: function () {
+															lightyear.loading('show');
+															$.ajax({
+																url: "/admin/updata/updata",
+																type: "GET", 
+																success: function (data) {
+																	if (data.code === 1) {
+																		lightyear.loading('hide');
+																		lightyear.notify(data.msg, data.type, 1000);
+																	} else {
+																		lightyear.loading('hide');
+																		lightyear.notify(data.msg, data.type, 1000);
+																	}
+																}
+															});
+														}
+													},
+													cancel: {
+														text: '取消',
+														btnClass: 'btn-success'
+													}
+												}
+											});
+										} else {
+											lightyear.loading('hide');
+											lightyear.notify(data.msg, data.type, 3000);
 										}
 									}
 								});

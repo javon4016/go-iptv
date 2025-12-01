@@ -23,7 +23,35 @@ func Install() (bool, string) {
 		return false, "缺少必要的文件"
 	}
 
-	os.RemoveAll("/config")
+	if err := os.RemoveAll("/config/bin/"); err != nil {
+		log.Println("删除/bin文件夹失败:", err)
+		return false, err.Error()
+	}
+	if err := os.RemoveAll("/config/updata/"); err != nil {
+		log.Println("删除/updata文件夹失败:", err)
+		return false, err.Error()
+	}
+	if err := os.RemoveAll("/config/images/"); err != nil {
+		log.Println("删除/images文件夹失败:", err)
+		return false, err.Error()
+	}
+	if err := os.RemoveAll("/config/cache/"); err != nil {
+		log.Println("删除/cache文件夹失败:", err)
+		return false, err.Error()
+	}
+	if err := os.RemoveAll("/config/iptv.db"); err != nil {
+		log.Println("删除iptv.db文件失败:", err)
+		return false, err.Error()
+	}
+	if err := os.RemoveAll("/config/install.lock"); err != nil {
+		log.Println("删除install.lock文件失败:", err)
+		return false, err.Error()
+	}
+	if err := os.RemoveAll("/config/config.yml"); err != nil {
+		log.Println("删除config.yml文件失败:", err)
+		return false, err.Error()
+	}
+
 	if err := os.MkdirAll("/config", 0755); err != nil {
 		log.Println("创建/config文件夹失败:", err)
 		return false, err.Error()

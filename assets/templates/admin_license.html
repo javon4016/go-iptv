@@ -105,7 +105,7 @@
                     <div class="card-body" style="position: relative;">
                         <p>引擎状态：{{ if eq .Status 1 }}<font color="#33a996">运行中</font>{{else}}<font color="red">已下线</font>{{ end }}</p>
                         <p>连接状态：{{ if eq .Online 1 }}<font color="#33a996">已连接</font>{{else}}<font color="red">已下线</font>{{ end }}</p>
-                        <p>引擎版本：{{ .Version }}</p>
+                        <p>引擎版本：{{ .Version }}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<label class="btn btn-info btn-xs" style="margin:0;" onclick="updatalic()">检测更新</label></p>
                     </div>
                 </div>
 			</div>
