@@ -1,6 +1,7 @@
 package bootstrap
 
 import (
+	"bytes"
 	"go-iptv/dao"
 	"go-iptv/models"
 	"go-iptv/until"
@@ -70,11 +71,24 @@ func Install() (bool, string) {
 	}
 
 	cmd = exec.Command("sqlite3", "/config/iptv.db")
-	cmd.Stdin, _ = os.Open("/app/database/sqlite.sql") // 把 SQL 文件内容传给标准输入
+
+	sqlFile, err := os.Open("/app/database/sqlite.sql")
+	if err != nil {
+		log.Println("无法打开 SQL 文件:", err)
+		return false, err.Error()
+	}
+	cmd.Stdin = sqlFile
+
+	// 捕获输出
+	var out bytes.Buffer
+	var stderr bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
-		log.Println("初始化数据库失败:", err)
-		return false, "初始化数据库失败:" + err.Error()
+		// stderr.String() 会包含 SQLite 的具体报错
+		log.Println("初始化数据库失败:", stderr.String(), err)
+		return false, "初始化数据库失败: " + stderr.String()
 	}
 	log.Println("初始化数据库完成")
 	log.Println("加载数据库...")

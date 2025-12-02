@@ -21,9 +21,6 @@ CREATE TABLE iptv_category (
     rawcount INTEGER DEFAULT 0
 );
 
-INSERT INTO iptv_category VALUES(1,'央视频道(自动聚合)',1,'auto',0,'',0,'(?i)CCTV-?(\d+\+?)$',1,0,0);
-INSERT INTO iptv_category VALUES(2,'卫视频道(自动聚合)',1,'auto',0,'',1,'卫视',1,0,0);
-
 CREATE TABLE iptv_category_list (
     id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     name TEXT NOT NULL UNIQUE,
