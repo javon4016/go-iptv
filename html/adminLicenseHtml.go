@@ -27,7 +27,7 @@ func License(c *gin.Context) {
 		res, err := dao.WS.SendWS(dao.Request{Action: "reloadLic"})
 		if err == nil {
 			if err := json.Unmarshal(res.Data, &dao.Lic); err != nil {
-				log.Println("license信息解析错误:", err)
+				log.Println("授权信息解析错误:", err)
 			}
 		}
 		verJson, err := dao.WS.SendWS(dao.Request{Action: "getVersion"})
@@ -41,14 +41,15 @@ func License(c *gin.Context) {
 		cfg := dao.GetConfig()
 		pageData.Proxy = cfg.Proxy.Status
 
-		if cfg.Proxy.PAddr == "" {
-			cfg.Proxy.PAddr = cfg.ServerUrl
-			pageData.Scheme, pageData.ProxyAddr, pageData.Port = until.ParseURL(cfg.ServerUrl)
+		if pageData.Proxy == 1 {
+			pageData.Aggregation = cfg.Aggregation.Status
 		} else {
-			pageData.ProxyAddr = cfg.Proxy.PAddr
-			pageData.Scheme = cfg.Proxy.Scheme
-			pageData.Port = cfg.Proxy.Port
+			pageData.Aggregation = 0
 		}
+
+		pageData.ProxyAddr = cfg.Proxy.PAddr
+		pageData.Scheme = cfg.Proxy.Scheme
+		pageData.Port = cfg.Proxy.Port
 
 		pageData.AutoRes = cfg.Resolution.Auto
 		pageData.DisCh = cfg.Resolution.DisCh

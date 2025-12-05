@@ -2,6 +2,7 @@ package until
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"go-iptv/dao"
 	"go-iptv/dto"
@@ -224,63 +225,27 @@ func GetAutoChannelList(category models.IptvCategory, show bool) []models.IptvCh
 		}
 	}
 
-	var channelList []models.IptvChannelShow
-	if err := dao.DB.Table(models.IptvChannelShow{}.TableName() + " AS c").
-		Select("c.*, e.name AS epg_name").
-		Joins("INNER JOIN " + models.IptvEpg{}.TableName() + " AS e ON c.e_id = e.id AND e.status = 1").
-		Where("c.e_id != 0 and c.status = 1").
-		Order("c_id,sort asc").
-		Find(&channelList).Error; err != nil {
-		log.Println("获取频道列表失败:", err)
+	var res dao.Response
+	var err error
+	if show {
+		res, err = dao.WS.SendWS(dao.Request{Action: "getAutoClassShow", Data: category.ID})
+
+		if err != nil || res.Code != 1 {
+			return result
+		}
+	} else {
+		res, err = dao.WS.SendWS(dao.Request{Action: "getAutoClass", Data: category.ID})
+		if err != nil || res.Code != 1 {
+			return result
+		}
+	}
+
+	if err := json.Unmarshal(res.Data, &result); err != nil {
 		return result
 	}
 
-	cfg := dao.GetConfig()
-
-	for _, ch := range channelList {
-		if strings.Contains(ch.Name, category.Rules) {
-			if ch.EpgName != "" {
-				ch.Logo = EpgNameGetLogo(ch.EpgName)
-				if category.ReName == 1 && !show {
-					ch.Name = ch.EpgName
-				}
-			}
-			if category.Proxy == 1 && cfg.Proxy.Status == 1 && ch.Status == 1 {
-				urlMsg := fmt.Sprintf("{\"c\":%d,\"u\":\"%s\"}", category.ID, ch.Url)
-				msg, err := UrlEncrypt(dao.Lic.ID, urlMsg)
-				if err == nil {
-					ch.PUrl = fmt.Sprintf("%s:%d/p/%s", cfg.Proxy.PAddr, cfg.Proxy.Port, msg)
-				}
-			}
-			result = append(result, ch)
-			continue
-		}
-		_, err := regexp.Compile(category.Rules)
-		if err != nil {
-			continue
-		}
-		re := regexp.MustCompile(category.Rules)
-
-		if re.MatchString(ch.Name) {
-			if ch.EpgName != "" {
-				ch.Logo = EpgNameGetLogo(ch.EpgName)
-				if category.ReName == 1 && !show {
-					ch.Name = ch.EpgName
-				}
-			}
-			if category.Proxy == 1 && cfg.Proxy.Status == 1 && ch.Status == 1 {
-				urlMsg := fmt.Sprintf("{\"c\":%d,\"u\":\"%s\"}", category.ID, ch.Url)
-				msg, err := UrlEncrypt(dao.Lic.ID, urlMsg)
-				if err == nil {
-					ch.PUrl = fmt.Sprintf("%s:%d/p/%s", cfg.Proxy.PAddr, cfg.Proxy.Port, msg)
-				}
-			}
-			result = append(result, ch)
-		}
-	}
-
 	if err := dao.Cache.SetStruct(autoCaCheKey, result); err != nil {
-		log.Println("epg缓存设置失败:", err)
+		log.Println("自动聚合缓存设置失败:", err)
 		dao.Cache.Delete(autoCaCheKey)
 	}
 
@@ -289,7 +254,7 @@ func GetAutoChannelList(category models.IptvCategory, show bool) []models.IptvCh
 
 func CaGetChannels(category models.IptvCategory, show bool) []models.IptvChannelShow {
 
-	if category.Type == "auto" {
+	if strings.Contains(category.Type, "auto") {
 		return GetAutoChannelList(category, show)
 	} else {
 		cfg := dao.GetConfig()
@@ -311,7 +276,14 @@ func CaGetChannels(category models.IptvCategory, show bool) []models.IptvChannel
 				urlMsg := fmt.Sprintf("{\"c\":%d,\"u\":\"%s\"}", category.ID, ch.Url)
 				msg, err := UrlEncrypt(dao.Lic.ID, urlMsg)
 				if err == nil {
-					channels[i].PUrl = fmt.Sprintf("%s:%d/p/%s", cfg.Proxy.PAddr, cfg.Proxy.Port, msg)
+					if cfg.Proxy.Scheme == "" {
+						cfg.Proxy.Scheme = "http"
+					}
+					cfg.Proxy.PAddr = strings.TrimPrefix(strings.TrimPrefix(cfg.Proxy.PAddr, "https://"), "http://")
+					if cfg.Proxy.Port == 0 {
+						cfg.Proxy.Port = 80
+					}
+					channels[i].PUrl = fmt.Sprintf("%s://%s:%d/p/%s", cfg.Proxy.Scheme, cfg.Proxy.PAddr, cfg.Proxy.Port, msg)
 				}
 			}
 		}
@@ -590,12 +562,12 @@ func GetTxt(id int64) string {
 		}
 
 		var channels []models.IptvChannelShow
-		if category.Type != "auto" {
-			channels = CaGetChannels(category, false)
-		} else {
+		if strings.Contains(category.Type, "auto") {
 			channels = GetAutoChannelList(category, false)
+		} else {
+			channels = CaGetChannels(category, false)
 		}
-		// channels := CaGetChannels(category, false)
+
 		if len(channels) == 0 {
 			continue
 		}
@@ -612,13 +584,8 @@ func GetTxt(id int64) string {
 		for _, channel := range channels {
 			if channel.Status == 1 {
 				if category.Proxy == 1 && cfg.Proxy.Status == 1 {
-					urlMsg := fmt.Sprintf("{\"c\":%d,\"u\":\"%s\"}", category.ID, channel.Url)
-					msg, err := UrlEncrypt(dao.Lic.ID, urlMsg)
-					if err == nil {
-						channel.PUrl = fmt.Sprintf("%s:%d/p/%s", cfg.Proxy.PAddr, cfg.Proxy.Port, msg)
-						tmpGroup[caGroup] += channel.Name + "," + channel.PUrl + "\n"
-						continue
-					}
+					tmpGroup[caGroup] += channel.Name + "," + channel.PUrl + "\n"
+					continue
 				}
 				tmpGroup[caGroup] += channel.Name + "," + channel.Url + "\n"
 			}

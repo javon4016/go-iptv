@@ -111,8 +111,8 @@ func Install() (bool, string) {
 	dao.LoadConfigFile()
 
 	if !dao.LoadConfig() {
-		log.Println("conf加载错误")
-		return false, "conf加载错误"
+		log.Println("配置加载错误")
+		return false, "配置加载错误"
 	}
 	file, err := os.Create("/config/install.lock") // 创建文件
 	if err != nil {

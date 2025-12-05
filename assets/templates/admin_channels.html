@@ -97,29 +97,29 @@
 														<small class="help-block">APTV源的UA样例为: AptvPlayer/1.4.10</small>
 													</div>
 													<div class="form-group">
-														<label class="lyear-checkbox checkbox-inline">
+														<label class="lyear-checkbox checkbox-success checkbox-inline">
 															<input type="checkbox" id="autocategory" name="autocategory" value="on" onclick="document.getElementById('autogroup').disabled = document.getElementById('lku9').disabled = !this.checked; document.getElementById('autogroup').checked = document.getElementById('lku9').checked = this.checked;"></input>
 															<span style="color: black; font-weight: bold;">启用自动分组</span>
 														</label>
-														<label class="lyear-checkbox checkbox-inline">
+														<label class="lyear-checkbox checkbox-success checkbox-inline">
 															<input type="checkbox" id="autogroup" name="autogroup" value="on" disabled></input>
 															<span style="color: black; font-weight: bold;">二级分组</span>
 														</label>
-														<label class="lyear-checkbox checkbox-inline">
+														<label class="lyear-checkbox checkbox-success checkbox-inline">
 															<input type="checkbox" id="lku9" name="ku9" value="on" disabled></input>
 															<span style="color: black; font-weight: bold;">TXT参数保留</span>
 														</label>
 														<small class="help-block">支持txt格式#genre#分组、支持m3u8格式group-title分组;  二级分组仅支持酷9的txt格式#group#分组，将分组名改为"分组名[一级分组](订阅源名称)"格式; TXT参数保留仅支持保留酷9等txt订阅分组附加参数</small>
 													</div>
 													<div class="form-group">
-														<label class="lyear-checkbox checkbox-inline">
+														<label class="lyear-checkbox checkbox-success checkbox-inline">
 															<input type="checkbox" id="repeat" name="repeat" value="on"></input>
 															<span style="color: black; font-weight: bold;">启用去重</span>
 														</label>
 														<small class="help-block">更新源数据时，判断频道链接是否和手动添加的列表是否重复</small>
 													</div>
 													<div class="form-group">
-														<label class="lyear-checkbox checkbox-inline">
+														<label class="lyear-checkbox checkbox-success checkbox-inline">
 															<input type="checkbox" id="clrename" name="rename" value="on"></input>
 															<span style="color: black; font-weight: bold;">频道重命名</span>
 														</label>
@@ -185,6 +185,9 @@
 											<td style="display:none;" class="ca-id" data-value="{{ .ID }}">{{ .ID }}</td>
 											<td style="display:none;" class="ca-ua" data-value="{{ .UA }}">{{ .UA }}</td>
 											<td style="display:none;" class="ca-ku9" data-value="{{ .Ku9 }}">{{ .Ku9 }}</td>
+											{{ if $.ShowAuto }}
+											<td style="display:none;" class="ca-rules" data-value="{{ .Rules }}">{{ .Rules }}"</td>
+											{{end}}
 											<td class="ca-name" data-value="{{ .Name }}">{{ .Name }}</td>
 											<td class="ca-type" data-value="{{ .Type }}">
 											{{ if eq .Type "add" }}
@@ -194,7 +197,11 @@
 											{{ else if eq .Type "user" }}
 												手动添加
 											{{ else if eq .Type "auto" }}
-												自动聚合
+												正则聚合
+											{{ else if eq .Type "autoRe" }}
+												正则聚合
+											{{ else if eq .Type "autoEpgs" }}
+												EPG聚合
 											{{ end }}
 											</td>
 											<td class="status-show">{{ if eq .Enable 1 }}<font color="#33a996">上线</font>{{else}}<font color="red">下线</font>{{end}}</td>
@@ -215,12 +222,13 @@
 									<div class="modal-dialog" role="document">
 										<div class="modal-content">
 											<div class="modal-header">
-												<button type="button" class="close" data-dismiss="modal" aria-label="Close" onclick="$('#caId').val('');$('#caname').val('');$('#rules').val('');$('#rename').prop('checked', true);$('#caproxy').prop('checked', false);"><span aria-hidden="true">&times;</span></button>
+												<button type="button" class="close" data-dismiss="modal" aria-label="Close" onclick="$('#caId').val('');$('#caname').val('');$('#autoRe').val('');$('#ku9').val('');$('#rename').prop('checked', true);$('#caproxy').prop('checked', false);ruleEpgsXm.setValue([ '' ]);$('#autoRe').prop('checked', false);$('#autoEpgs').prop('checked', false);"><span aria-hidden="true">&times;</span></button>
 												<h4 class="modal-title">分组编辑</h4>
 											</div>
 											<form method="post" action="/admin/channels">
 												<div class="modal-body">
 													<input type="hidden" id="caId" data-value="" name="caId" value="">
+													<input type="hidden" id="autoType" data-value="" name="autoType" value="">
 													<div class="form-group">
 														<label for="recipient-name" class="control-label">分组名称：</label>
 														<input type="text" class="form-control" id="caname" name="caname" placeholder="分组名称">
@@ -228,7 +236,6 @@
 													<div class="form-group">
 														<label for="message-text" class="control-label">User-Agent: </label>
 														<input class="form-control" id="caua" name="caua" placeholder="Go-http-client/1.1"></input>
-														<small class="help-block">APTV源的UA样例为: AptvPlayer/1.4.10</small>
 													</div>
 													<div class="form-group" style="margin-right: 15px;">
 														<label>开启中转:</label>
@@ -247,23 +254,29 @@
 													</div>
 													<div class="form-group">
 														<label>额外参数:</label>
-														<textarea class="form-control" rows="3" id="ku9" name="ku9" placeholder="参数内容"></textarea>
-														<small class="help-block">酷9 txt格式源分组额外参数 DE=解码#SC=画面比例#HEADERS=请求头#JS=Js路径#PB=回放参数#HOST=Host#PBO=回放偏移值#IJKAD=Ijk_Analyzeduration#TSO=时移结束时间增加值</small>
+														<textarea class="form-control" rows="3" id="ku9" name="ku9" placeholder="酷9 txt格式源分组额外参数 DE=解码#SC=画面比例#HEADERS=请求头#JS=Js路径#PB=回放参数#HOST=Host#PBO=回放偏移值#IJKAD=Ijk_Analyzeduration#TSO=时移结束时间增加值"></textarea>
 													</div>
-													<!-- <div class="form-group">
-														<label for="rules" class="control-label">自动聚合规则: </label>
-														<input class="form-control" id="rules" name="rules" placeholder="正则表达式" disabled></input>
-														<small class="help-block">自动聚合规则为正则表达式</small>
-													</div> -->
-													<!-- <div class="form-group">
-   														<input type="checkbox" id="autoagg" name="autoagg" value="on" onclick="document.getElementById('rules').disabled = !this.checked"></input>
-   														<label for="autoagg" class="control-label">启用自动聚合</label>
+													{{ if .ShowAuto }}
+													<div class="form-group">
+														<label class="lyear-radio radio-success radio-inline">
+															<input type="checkbox" id="autoRe" onclick="toggleSingleCheck(this, 'autoEpgs', 'autoRe')">
+															<span style="color: black; font-weight: bold;">正则聚合</span>
+														</label>
+														<label class="lyear-radio radio-success radio-inline">
+															<input type="checkbox" id="autoEpgs" onclick="toggleSingleCheck(this, 'autoRe', 'autoEpgs')">
+															<span style="color: black; font-weight: bold;">EPG聚合</span>
+														</label>
 														<small class="help-block">提取所有符合自动聚合规则的频道到该分组，频道所在的原分组不受影响。注意：当前分组如果已有频道，将会全部清空！</small>
-													</div> -->
+													</div>
+													<div class="form-group" id="rules-re" style="display: none;">
+														<input class="form-control" id="rulesRe" name="rulesRe" placeholder="正则表达式"></input>
+													</div>
+													<div class="form-group" id="rule-epg" style="display: none;"></div>
+													{{end}}
 												</div>
 												<div class="modal-footer">
 													<button type="button" onclick="submitFormPOST(this)" class="btn btn-primary" name="saveCa">确定</button>
-													<button type="button" class="btn btn-default" onclick="$('#caId').val('');$('#caname').val('');$('#rules').val('');$('#ku9').val('');$('#rename').prop('checked', true);$('#caproxy').prop('checked', false);" data-dismiss="modal">关闭</button>
+													<button type="button" class="btn btn-default" onclick="$('#caId').val('');$('#caname').val('');$('#autoRe').val('');$('#ku9').val('');$('#rename').prop('checked', true);$('#caproxy').prop('checked', false);ruleEpgsXm.setValue([ '' ]);$('#autoRe').prop('checked', false);$('#autoEpgs').prop('checked', false);" data-dismiss="modal">关闭</button>
 												</div>
 											</form>
 										</div>
@@ -481,8 +494,24 @@ var chEpg = xmSelect.render({
         }
     }
 })
-
-
+{{ if .ShowAuto }}
+var ruleEpgsXm = xmSelect.render({
+	el: '#rule-epg', 
+	name: 'ruleEpgs',
+	autoRow: true,
+	tips: '选择聚合的EPG', 
+	filterable: true,
+	paging: true,
+	pageSize: 5,
+	toolbar: {show: true, list: [ 'CLEAR']},
+	direction: 'up',
+	data: [
+		{{ range .Epgs }}
+		{name: '{{.Name}}', value: {{.ID}}},
+		{{end}}
+	]
+})
+{{end}}
 </script>
 
 {{ template "admin_footer" . }}

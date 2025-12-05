@@ -112,7 +112,7 @@ func doRebuild(ctx context.Context) {
 		makeMealsXmlCacheAll()
 		log.Println("✅ EPG缓存重建任务执行完成")
 		cfg := dao.GetConfig()
-		if cfg.Resolution.Auto == 1 && dao.Lic.Tpye != 0 {
+		if cfg.Resolution.Auto == 1 && dao.Lic.Type != 0 {
 			log.Println("🚀 开始执行分辨率识别任务")
 			log.Println("开始执行分辨率测试，测试期间cpu、内存占用会较高，请耐心等待，中断执行请关闭自动测试并重启引擎")
 			res, err := dao.WS.SendWS(dao.Request{Action: "testResolutionAll"}) //测试分辨率
@@ -191,7 +191,7 @@ func CleanMealsTxtCacheOne(id int64) {
 
 func CleanAutoCacheAll() {
 	var ca []models.IptvCategory
-	dao.DB.Model(&models.IptvCategory{}).Where("enable = 1 and type = ?", "auto").Find(&ca)
+	dao.DB.Model(&models.IptvCategory{}).Where("enable = 1 and type like ?", "auto%").Find(&ca)
 	for _, ca := range ca {
 		log.Println("删除自动聚合缓存: ", ca.Name)
 		dao.Cache.Delete("autoCategory_" + strconv.FormatInt(ca.ID, 10))

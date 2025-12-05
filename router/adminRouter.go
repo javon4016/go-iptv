@@ -60,6 +60,7 @@ func AdminRouter(r *gin.Engine, path string) {
 			router.GET("/about", html.About)
 
 			router.GET("/license", html.License)
+			router.GET("/license/checkProxy", api.CheckProxy)
 			router.POST("/license", api.License)
 
 			router.GET("/updata", html.Updata)

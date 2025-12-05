@@ -1,6 +1,8 @@
 package api
 
 import (
+	"fmt"
+	"go-iptv/dao"
 	"go-iptv/dto"
 	"go-iptv/service"
 	"go-iptv/until"
@@ -30,6 +32,8 @@ func License(c *gin.Context) {
 			res = service.DisCh(params)
 		case "epgFuzz":
 			res = service.EpgFuzz(params)
+		case "aggStatus":
+			res = service.AggStatus(params)
 		case "register":
 			res = service.Register(params)
 		case "login":
@@ -41,4 +45,16 @@ func License(c *gin.Context) {
 	}
 
 	c.JSON(200, res)
+}
+
+func CheckProxy(c *gin.Context) {
+	_, ok := until.GetAuthName(c)
+	if !ok {
+		c.JSON(200, dto.NewAdminRedirectDto())
+		return
+	}
+	cfg := dao.GetConfig()
+
+	url := fmt.Sprintf("%s://%s:%d/status", cfg.Proxy.Scheme, cfg.Proxy.PAddr, cfg.Proxy.Port)
+	c.JSON(200, until.GetUrlData(url))
 }

@@ -22,8 +22,15 @@ func Meals(c *gin.Context) {
 	}
 
 	dao.DB.Model(&models.IptvMeals{}).Find(&pageData.Meals)
+
+	cfg := dao.GetConfig()
+	var query string = "enable = 1 and type not like 'auto%'"
+	if dao.Lic.Type != 0 && cfg.Proxy.Status == 1 && cfg.Aggregation.Status == 1 {
+		query = "enable = 1"
+	}
+
 	var tmpCas []models.IptvCategory
-	dao.DB.Model(&models.IptvCategory{}).Where("enable = 1").Find(&tmpCas)
+	dao.DB.Model(&models.IptvCategory{}).Where(query).Find(&tmpCas)
 	pageData.ChannelNum = int64(len(tmpCas))
 
 	for i, meal := range pageData.Meals {

@@ -73,7 +73,7 @@ func BuildAPK() bool {
 
 	if until.Exists(iconFile) {
 		log.Println("更换图标")
-		if dao.Lic.Tpye >= 1 {
+		if dao.Lic.Type >= 1 {
 			until.CopyFile(iconFile, buildSourceDir+"/res/drawable-hdpi/ezpay.png")
 		}
 		err1 := until.CopyFile(iconFile, buildSourceDir+"/res/drawable-hdpi/icon.png")

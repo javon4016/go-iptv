@@ -70,7 +70,7 @@ func GetCa(params url.Values) dto.ReturnJsonDto {
 	}
 
 	var caList []models.IptvCategory
-	if err := dao.DB.Model(&models.IptvCategory{}).Where("enable = 1 and type != ?", "auto").Find(&caList).Error; err != nil {
+	if err := dao.DB.Model(&models.IptvCategory{}).Where("enable = 1 and type not like ?", "auto%").Find(&caList).Error; err != nil {
 		return dto.ReturnJsonDto{Code: 0, Msg: "查询分组失败", Type: "danger"}
 	}
 

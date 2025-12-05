@@ -4,7 +4,7 @@ type IptvCategory struct {
 	ID        int64  `gorm:"column:id;primaryKey;autoIncrement" json:"id"`
 	Name      string `gorm:"unique;column:name" json:"name"`
 	Enable    int64  `gorm:"column:enable;default:1" json:"enable"`
-	Type      string `gorm:"default:hand;column:type" json:"type"`
+	Type      string `gorm:"default:user;column:type" json:"type"`
 	Proxy     int64  `gorm:"column:proxy" json:"proxy"`
 	ReName    int64  `gorm:"column:rename" json:"rename"`
 	Ku9       string `gorm:"column:ku9" json:"ku9"`

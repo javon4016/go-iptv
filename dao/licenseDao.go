@@ -62,7 +62,7 @@ func ConLicense(url string) (*WSClient, error) {
 		return nil, err
 	}
 
-	// 启动心跳检测
+	// 启动引擎在线检测检测
 	go client.heartbeat()
 
 	return client, nil
@@ -107,13 +107,13 @@ func (c *WSClient) IsOnline() bool {
 
 // RestartLicense 会尝试重启 License 服务并重新建立 WS 连接
 
-// -------------------- 心跳机制 --------------------
+// -------------------- 引擎在线检测机制 --------------------
 
 func (c *WSClient) heartbeat() {
 	if !IsRunning() {
 		return
 	}
-	log.Println("启动心跳检测...")
+	log.Println("启动引擎在线检测检测...")
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 
@@ -129,7 +129,7 @@ func (c *WSClient) heartbeat() {
 			c.lock.Unlock()
 
 			if err != nil {
-				log.Println("⚠️ 心跳失败，尝试重连...")
+				log.Println("⚠️ 引擎在线检测失败，尝试重连...")
 				c.reconnect()
 			}
 		case <-c.done:

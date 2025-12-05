@@ -89,6 +89,7 @@ func main() {
 		log.Println("conf加载错误")
 		return
 	}
+	until.InitProxy() // 初始化代理
 
 	log.Println("加载数据库...")
 	if debug {

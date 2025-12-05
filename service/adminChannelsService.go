@@ -527,9 +527,9 @@ func SubmitSave(params url.Values) dto.ReturnJsonDto {
 	if err := dao.DB.Model(&models.IptvCategory{}).Where("id = ?", categoryId).First(&category).Error; err != nil {
 		return dto.ReturnJsonDto{Code: 0, Msg: "未找到当前记录", Type: "danger"}
 	}
-	// if category.Type == "auto" {
-	// 	return dto.ReturnJsonDto{Code: 0, Msg: "聚合分类不允许修改", Type: "danger"}
-	// }
+	if strings.Contains(category.Type, "auto") {
+		return dto.ReturnJsonDto{Code: 0, Msg: "聚合分类不允许修改", Type: "danger"}
+	}
 
 	if category.Sort < 0 {
 		return dto.ReturnJsonDto{Code: 0, Msg: "默认分类不允许修改", Type: "danger"}
@@ -776,8 +776,9 @@ func SaveCategory(params url.Values) dto.ReturnJsonDto {
 	caId := params.Get("caId")
 	caname := params.Get("caname")
 	caua := params.Get("caua")
-	// autoagg := params.Get("autoagg")
-	// rules := params.Get("rules")
+	autoType := params.Get("autoType")
+	rulesRe := params.Get("rulesRe")
+	ruleEpgs := params.Get("ruleEpgs")
 	ku9 := params.Get("ku9")
 	proxy := params.Get("caproxy")
 	rename := params.Get("rename")
@@ -800,24 +801,40 @@ func SaveCategory(params url.Values) dto.ReturnJsonDto {
 		var maxSort int64
 		dao.DB.Model(&models.IptvCategory{}).Select("IFNULL(MAX(sort),0)").Scan(&maxSort)
 		var new = models.IptvCategory{Name: caname, Type: "user", Sort: maxSort + 1, UA: caua, Ku9: ku9}
-		// if autoagg == "1" || autoagg == "true" || autoagg == "on" {
-		// 	new.Type = "auto"
-		// 	new.Rules = rules
-		// }
 
 		if proxy == "1" || proxy == "true" || proxy == "on" {
 			new.Proxy = 1
 		}
+
+		if autoType != "" {
+			if dao.Lic.Type == 0 {
+				return dto.ReturnJsonDto{Code: 0, Msg: "未授权不支持自动分类", Type: "danger"}
+			}
+			_, err := until.CheckLicVer("v1.5.10")
+			if err != nil {
+				return dto.ReturnJsonDto{Code: 0, Msg: err.Error(), Type: "danger"}
+			}
+			switch autoType {
+			case "auto", "autoRe":
+				new.Type = "autoRe"
+				new.Rules = rulesRe
+			case "autoEpgs":
+				new.Type = "autoEpgs"
+				new.Rules = ruleEpgs
+			}
+			new.Proxy = 1
+		}
+
 		if rename == "1" || rename == "true" || rename == "on" {
 			new.ReName = 1
 		}
 		dao.DB.Model(&models.IptvCategory{}).Create(&new)
-		// if new.Type == "auto" {
-		// 	go until.CleanAutoCacheAll()
-		// } else {
-		go until.SyncCaToEpg(new.ID)
-		go until.CleanMealsTxtCacheAll()
-		// }
+		if strings.Contains(new.Type, "auto") {
+			go until.CleanAutoCacheAll()
+		} else {
+			go until.SyncCaToEpg(new.ID)
+			go until.CleanMealsTxtCacheAll()
+		}
 	} else {
 		caIdInt, err := strconv.ParseInt(caId, 10, 64)
 		if err != nil {
@@ -831,16 +848,35 @@ func SaveCategory(params url.Values) dto.ReturnJsonDto {
 		ca.UA = caua
 		ca.Ku9 = ku9
 		ca.Type = "user"
-		// if autoagg == "1" || autoagg == "true" || autoagg == "on" {
-		// 	ca.Type = "auto"
-		// 	ca.Rules = rules
-		// 	dao.DB.Model(&models.IptvChannel{}).Delete(&models.IptvChannel{}, "c_id = ?", ca.ID)
-		// }
+		ca.Rules = ""
+
 		if proxy == "1" || proxy == "true" || proxy == "on" {
 			ca.Proxy = 1
 		} else {
 			ca.Proxy = 0
 		}
+
+		if autoType != "" {
+			if dao.Lic.Type == 0 {
+				return dto.ReturnJsonDto{Code: 0, Msg: "未授权不支持自动分类", Type: "danger"}
+			}
+			_, err := until.CheckLicVer("v1.5.10")
+			if err != nil {
+				return dto.ReturnJsonDto{Code: 0, Msg: err.Error(), Type: "danger"}
+			}
+			switch autoType {
+			case "auto", "autoRe":
+				ca.Type = "autoRe"
+				ca.Rules = rulesRe
+				dao.DB.Model(&models.IptvChannel{}).Delete(&models.IptvChannel{}, "c_id = ?", ca.ID)
+			case "autoEpgs":
+				ca.Type = "autoEpgs"
+				ca.Rules = ruleEpgs
+				dao.DB.Model(&models.IptvChannel{}).Delete(&models.IptvChannel{}, "c_id = ?", ca.ID)
+			}
+			ca.Proxy = 1
+		}
+
 		if rename == "1" || rename == "true" || rename == "on" {
 			ca.ReName = 1
 		} else {
@@ -859,19 +895,19 @@ func SaveCategory(params url.Values) dto.ReturnJsonDto {
 		proxyCaCheck := "proxyCaCheck_" + strconv.FormatInt(caIdInt, 10)
 		dao.Cache.Delete(proxyCaCheck)
 
-		// if ca.Type == "auto" {
-		// 	go until.RemoveCaFromEpg(caIdInt)
-		// 	go until.CleanAutoCacheAll()
-		// } else {
-		go until.CleanMealsTxtCacheAll()
-		// }
+		if strings.Contains(ca.Type, "auto") {
+			go until.RemoveCaFromEpg(caIdInt)
+			go until.CleanAutoCacheAll()
+		} else {
+			go until.CleanMealsTxtCacheAll()
+		}
 	}
 	return dto.ReturnJsonDto{Code: 1, Msg: "操作成功", Type: "success"}
 }
 
 func TestResolutionOne(params url.Values) dto.ReturnJsonDto {
 	chId := params.Get("testResolutionOne")
-	if dao.Lic.Tpye == 0 {
+	if dao.Lic.Type == 0 {
 		return dto.ReturnJsonDto{Code: 0, Msg: "未授权", Type: "danger"}
 	}
 	if chId == "" {

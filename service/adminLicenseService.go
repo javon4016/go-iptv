@@ -16,7 +16,7 @@ import (
 
 func Proxy(params url.Values) dto.ReturnJsonDto {
 	cfg := dao.GetConfig()
-	if dao.Lic.Tpye == 0 {
+	if dao.Lic.Type == 0 {
 		cfg.Proxy.Status = 0
 
 		dao.SetConfig(cfg)
@@ -27,7 +27,7 @@ func Proxy(params url.Values) dto.ReturnJsonDto {
 	scheme := params.Get("scheme")
 
 	if scheme == "" || (scheme != "http" && scheme != "https") {
-		return dto.ReturnJsonDto{Code: 0, Msg: "协议不正确", Type: "danger"}
+		return dto.ReturnJsonDto{Code: 0, Msg: "中转协议不正确", Type: "danger"}
 	}
 	port := params.Get("port")
 	proxy := params.Get("proxy")
@@ -35,21 +35,22 @@ func Proxy(params url.Values) dto.ReturnJsonDto {
 
 	if proxy == "1" || proxy == "true" || proxy == "on" {
 		if port == "" {
-			return dto.ReturnJsonDto{Code: 0, Msg: "端口不能为空", Type: "danger"}
+			return dto.ReturnJsonDto{Code: 0, Msg: "中转端口不能为空", Type: "danger"}
 		}
 
 		if pAddr == "" {
-			return dto.ReturnJsonDto{Code: 0, Msg: "地址不能为空", Type: "danger"}
+			return dto.ReturnJsonDto{Code: 0, Msg: "中转地址不能为空", Type: "danger"}
 		}
 		pAddr = strings.TrimPrefix(strings.TrimPrefix(pAddr, "https://"), "http://")
 
 		portInt64, err := strconv.ParseInt(port, 10, 64)
 		if err != nil {
-			return dto.ReturnJsonDto{Code: 0, Msg: "port为数字", Type: "danger"}
+			return dto.ReturnJsonDto{Code: 0, Msg: "中转端口为数字", Type: "danger"}
 		}
-		if portInt64 < 82 || portInt64 > 65535 {
-			return dto.ReturnJsonDto{Code: 0, Msg: "port为82-65535", Type: "danger"}
+		if portInt64 < 80 || portInt64 > 65535 {
+			return dto.ReturnJsonDto{Code: 0, Msg: "中转端口范围为80-65535", Type: "danger"}
 		}
+		cfg.Proxy.Scheme = scheme
 		cfg.Proxy.Port = portInt64
 		cfg.Proxy.PAddr = pAddr
 
@@ -115,7 +116,7 @@ func ResEng() dto.ReturnJsonDto {
 func AutoRes(params url.Values) dto.ReturnJsonDto {
 	autoRes := params.Get("autoRes")
 	cfg := dao.GetConfig()
-	if dao.Lic.Tpye == 0 {
+	if dao.Lic.Type == 0 {
 		cfg.Resolution.Auto = 0
 		dao.SetConfig(cfg)
 		return dto.ReturnJsonDto{Code: 0, Msg: "未授权", Type: "danger"}
@@ -132,7 +133,7 @@ func AutoRes(params url.Values) dto.ReturnJsonDto {
 func DisCh(params url.Values) dto.ReturnJsonDto {
 	disCh := params.Get("disCh")
 	cfg := dao.GetConfig()
-	if dao.Lic.Tpye == 0 {
+	if dao.Lic.Type == 0 {
 		cfg.Resolution.DisCh = 0
 		dao.SetConfig(cfg)
 		return dto.ReturnJsonDto{Code: 0, Msg: "未授权", Type: "danger"}
@@ -149,7 +150,7 @@ func DisCh(params url.Values) dto.ReturnJsonDto {
 func EpgFuzz(params url.Values) dto.ReturnJsonDto {
 	epgFuzz := params.Get("epgFuzz")
 	cfg := dao.GetConfig()
-	if dao.Lic.Tpye == 0 {
+	if dao.Lic.Type == 0 {
 		cfg.Epg.Fuzz = 0
 		dao.SetConfig(cfg)
 		return dto.ReturnJsonDto{Code: 0, Msg: "未授权", Type: "danger"}
@@ -158,6 +159,23 @@ func EpgFuzz(params url.Values) dto.ReturnJsonDto {
 		cfg.Epg.Fuzz = 1
 	} else {
 		cfg.Epg.Fuzz = 0
+	}
+	dao.SetConfig(cfg)
+	return dto.ReturnJsonDto{Code: 1, Msg: "设置成功", Type: "success"}
+}
+
+func AggStatus(params url.Values) dto.ReturnJsonDto {
+	aggStatus := params.Get("aggStatus")
+	cfg := dao.GetConfig()
+	if dao.Lic.Type == 0 {
+		cfg.Aggregation.Status = 0
+		dao.SetConfig(cfg)
+		return dto.ReturnJsonDto{Code: 0, Msg: "未授权", Type: "danger"}
+	}
+	if aggStatus == "1" || aggStatus == "true" || aggStatus == "on" {
+		cfg.Aggregation.Status = 1
+	} else {
+		cfg.Aggregation.Status = 0
 	}
 	dao.SetConfig(cfg)
 	return dto.ReturnJsonDto{Code: 1, Msg: "设置成功", Type: "success"}

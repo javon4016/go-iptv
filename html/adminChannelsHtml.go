@@ -20,8 +20,16 @@ func Channels(c *gin.Context) {
 		LoginUser: username,
 		Title:     "频道列表",
 	}
-
+	pageData.Lic = dao.Lic
+	pageData.ShowAuto = false
 	cfg := dao.GetConfig()
+
+	var query string = "type not like 'auto%'"
+	if pageData.Lic.Type != 0 && cfg.Proxy.Status == 1 && cfg.Aggregation.Status == 1 {
+		pageData.ShowAuto = true
+		query = "1=1"
+	}
+
 	autoUpdate := cfg.Channel.Auto
 	if autoUpdate == 1 {
 		pageData.AutoUpdate = true
@@ -32,7 +40,7 @@ func Channels(c *gin.Context) {
 	pageData.UpdateInterval = cfg.Channel.Interval
 
 	dao.DB.Model(&models.IptvCategoryList{}).Find(&pageData.CategoryList)
-	dao.DB.Model(&models.IptvCategory{}).Order("sort ASC").Find(&pageData.Categorys)
+	dao.DB.Model(&models.IptvCategory{}).Where(query).Order("sort ASC").Find(&pageData.Categorys)
 	dao.DB.Model(&models.IptvEpg{}).Where("status = 1").Find(&pageData.Epgs)
 
 	for i, ch := range pageData.Categorys {

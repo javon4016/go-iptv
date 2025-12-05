@@ -94,7 +94,7 @@ CREATE TABLE iptv_meals (
     content TEXT DEFAULT NULL,
     status INTEGER NOT NULL DEFAULT 1
 );
-INSERT INTO iptv_meals VALUES(1000,'默认套餐','央视频道(自动聚合)_卫视频道(自动聚合)',1);
+INSERT INTO iptv_meals VALUES(1000,'默认套餐','',1);
 INSERT INTO iptv_meals VALUES(1001,'卧室套餐','',1);
 CREATE TABLE iptv_users (
     id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,

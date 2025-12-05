@@ -601,17 +601,69 @@ function getCategory(btn) {
 	$("#caId").val(cid);
 	$("#caname").val(cname);
 	$("#caua").val(cua);
-	$("#rules").val(crules);
+	
 	$("#ku9").val(ku9);
-	// if (ctype === "auto") {
-	// 	document.getElementById('rules').disabled = false;
-	// }else{
-	// 	document.getElementById('rules').disabled = true;
-	// }
-	$("#autoagg").prop("checked", ctype === "auto");
+
+	if (ctype === "autoRe" || ctype === "autoEpgs" || ctype === "auto") {
+		$("#autoType").val(ctype);
+		if (ctype === "autoRe" || ctype === "auto") {
+			$("#rulesRe").val(crules);
+			ruleEpgsXm.setValue([ '' ]);
+		    $("#autoRe").prop("checked", ctype === "autoRe" || ctype === "auto");
+			toggleSingleCheck(document.getElementById('autoRe'), 'autoEpgs', 'autoRe');
+		}else{
+			$("#rulesRe").val('');
+			var epgarray = (crules === "" || crules == null) ? [] : String(crules).split(',');
+			ruleEpgsXm.setValue(epgarray);
+			$("#autoEpgs").prop("checked", ctype === "autoEpgs");
+			toggleSingleCheck(document.getElementById('autoEpgs'), 'autoRe', 'autoEpgs');
+		}
+	}else{
+		$("#autoType").val('');
+		$("#rulesRe").val('');
+		ruleEpgsXm.setValue([ '' ]);
+		$("#autoRe").prop("checked", false);
+		$("#autoEpgs").prop("checked", false);
+		toggleSingleCheck(null, null, null);
+	}
+	
 	$("#caproxy").prop("checked", cproxy === 1);
 	$("#carename").prop("checked", rename === 1);
 }
+
+function toggleSingleCheck(current, otherId, type) {
+	if (!current) {
+        document.getElementById('rules-re').style.display = 'none';
+        document.getElementById('rule-epg').style.display = 'none';
+        return;
+    }
+    let other = document.getElementById(otherId);
+
+    // 先互斥
+    if (current.checked) {
+        other.checked = false;
+    }
+
+    // 显示对应 div
+	$("#autoType").val(type);
+    if (type === 'autoRe' && current.checked) {
+		
+        document.getElementById('rules-re').style.display = 'block';
+        document.getElementById('rule-epg').style.display = 'none';
+    } else if (type === 'autoEpgs' && current.checked) {
+        document.getElementById('rules-re').style.display = 'none';
+        document.getElementById('rule-epg').style.display = 'block';
+    }
+
+    // 如果两个都没选 —— 全部隐藏
+    if (!current.checked && !other.checked) {
+		$("#autoType").val('');
+        document.getElementById('rules-re').style.display = 'none';
+        document.getElementById('rule-epg').style.display = 'none';
+    }
+}
+
+
 function getChannels(id,btn) {
 	var $tr = $(btn).closest("tr");
 	var ctype = $tr.find(".ca-type").data("value"); 
@@ -657,7 +709,7 @@ function getChannels(id,btn) {
       ? '无' 
       : '<div id="logo_' + item.id + '" style="position:relative;"><img class="ch-logo" src="' + item.logo + '" alt="预览" style="background-color:black;height:38px;border:1px solid #ccc;border-radius:4px;cursor:pointer;"></div>') + '</td>' +
   '<td>' +
-  (ctype === "auto" ? '':
+  (ctype.includes("auto") ? '':
     '<button type="button" onclick="tdBtnPOST(this)" name="channelsStatus" value="' + item.id + '" class="btn btn-xs ' + (item.status === 1 ? 'btn-warning">下线' : 'btn-success">上线') + '</button>&nbsp;' +
 	'<button type="button" onclick="tdBtnPOST(this)" name="testResolutionOne" value="' + item.id + '" class="btn btn-xs btn-success">分辨率测试</button>&nbsp;' +
     '<button class="btn btn-xs btn-info" type="button" value="' + item.id + '" data-toggle="modal" onclick="editChannel(this)" data-target="#editchannel">编辑</button>&nbsp;' +
@@ -676,6 +728,7 @@ function getChannelsTxt(btn){
 	var $tr = $(btn).closest("tr"); 
 	var cid = $tr.find(".ca-id").data("value");
 	var cname = $tr.find(".ca-name").data("value");
+	var ctype = $tr.find(".ca-type").data("value"); 
 	$("#showtxtcaId").val(cid);
 	$("#showtxtCaname").val(cname);
 	$.ajax({
@@ -692,16 +745,22 @@ function getChannelsTxt(btn){
 				data.data.forEach(item => {
 					result += item.status + "|" + item.name + "," + item.url + "\n";
 					if (item.purl != "" && item.purl != null && item.status == 1){
-						purls += item.status + "|" + item.name + "," + item.purl + "\n";
+						purls += item.name + "," + item.purl + "\n";
 					}
 				});
-				$("#srclist").val(result);
 				if (purls != ""){
 					$("#plist").val(purls);
 				}else {
 					$("#plist").val("未授权或未开启代理");
 				}
-				resetShowUrl();
+
+				if (ctype.includes("auto")){
+					$("#srclist").val('');
+					showPurl()
+				}else{
+					$("#srclist").val(result);
+					resetShowUrl();
+				}
 			}
 		},
 		error: function() {
@@ -714,21 +773,35 @@ function copyCh() {
     var srclist = document.getElementById("srclist");
     var plist = document.getElementById("plist");
 
-    // 根据显示状态决定使用哪个 textarea
-    var sourceText = (srclist.style.display === "none")
-        ? plist.value || ""
-        : srclist.value || "";
+    var filtered = [];
 
-    // 提取以“1|”开头的行，并去掉“1|”
-    var filtered = sourceText
-        .split("\n")
-        .map(function (l) { return l.trim(); })
-        .filter(function (l) { return l.startsWith("1|"); })
-        .map(function (l) { return l.substring(2); });
+    // 当前显示的是 srclist：处理 1| 开头
+    if (srclist.style.display !== "none") {
 
-    if (filtered.length === 0) {
-        lightyear.notify("没有符合条件的频道", "danger", 1000);
-        return;
+        var sourceText = srclist.value || "";
+        filtered = sourceText
+            .split("\n")
+            .map(function (l) { return l.trim(); })
+            .filter(function (l) { return l.startsWith("1|"); })
+            .map(function (l) { return l.substring(2); });
+
+        if (filtered.length === 0) {
+            lightyear.notify("没有上线的频道", "danger", 1000);
+            return;
+        }
+
+    } else {
+        // 当前显示的是 plist：不处理，直接复制全部
+        var sourceText = plist.value || "";
+        filtered = sourceText
+            .split("\n")
+            .map(function (l) { return l.trim(); })
+            .filter(function (l) { return l.length > 0 });
+
+        if (filtered.length === 0) {
+            lightyear.notify("未授权或未开启代理", "danger", 1000);
+            return;
+        }
     }
 
     var outText = filtered.join("\n");
@@ -755,12 +828,23 @@ function copyCh() {
 }
 
 
+function showPurl() {
+    const src = document.getElementById("srclist");
+    const proxy = document.getElementById("plist");
+    const btn = document.getElementById("showPurl");
+
+    src.style.display = "none";
+    proxy.style.display = "";
+	btn.style.display = "none"; 
+    if (btn) btn.innerText = "切换代理地址";
+}
 
 function resetShowUrl() {
     const src = document.getElementById("srclist");
     const proxy = document.getElementById("plist");
     const btn = document.getElementById("showPurl");
 
+	btn.style.display = ""; 
     src.style.display = "";
     proxy.style.display = "none";
     if (btn) btn.innerText = "切换代理地址";
@@ -1442,4 +1526,21 @@ function updatalic(){
             lightyear.notify("操作失败", 'danger', 1000);
         }
     });
+}
+
+function checkProxy(){
+	lightyear.loading('show');
+	$.ajax({
+		url: "/admin/license/checkProxy",
+		type: "GET", 
+		success: function (data) {
+			if (data === "ok") {
+				lightyear.loading('hide');
+				lightyear.notify("中转服务访问正常", "success", 1000);
+			} else {
+				lightyear.loading('hide');
+				lightyear.notify("中转服务访问异常,请检查配置", "danger", 3000);
+			}
+		}
+	});
 }

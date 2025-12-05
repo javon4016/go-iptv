@@ -300,7 +300,7 @@ func BindChannel() bool {
 	}
 
 	cfg := dao.GetConfig()
-	if cfg.Epg.Fuzz == 1 && dao.Lic.Tpye != 0 {
+	if cfg.Epg.Fuzz == 1 && dao.Lic.Type != 0 {
 		dao.WS.SendWS(dao.Request{Action: "checkChEpg"})
 	}
 	go CleanAutoCacheAll() // 清理缓存
@@ -390,7 +390,7 @@ func SyncEpgs(fromId int64, epgs []models.IptvEpg, newAdd bool) (bool, error) {
 	if len(toAdd) > 0 {
 		var caIDs []int64
 		dao.DB.Model(&models.IptvCategory{}).
-			Where("enable = 1 AND type != ?", "auto").
+			Where("enable = 1 AND type not like ?", "auto%").
 			Pluck("id", &caIDs)
 
 		for _, toAddOne := range toAdd {
@@ -446,18 +446,18 @@ func GetEpg(id int64) dto.XmlTV {
 		return res
 	}
 	var categoryList []models.IptvCategory
-	if err := dao.DB.Model(&models.IptvCategory{}).Where("id in (?) and enable = 1", categoryIdList).Order("sort asc").Find(&categoryList).Error; err != nil {
+	if err := dao.DB.Model(&models.IptvCategory{}).Where("id in (?) and enable = 1 and type not like 'auto%'", categoryIdList).Order("sort asc").Find(&categoryList).Error; err != nil {
 		return res
 	}
 
 	var channels []models.IptvChannelShow
 	for _, category := range categoryList {
-		if category.Type != "auto" {
+		if strings.Contains(category.Type, "auto") {
+			channels = GetAutoChannelList(category, false)
+		} else {
 			var tmpChannels []models.IptvChannelShow
 			dao.DB.Model(&models.IptvChannelShow{}).Where("c_id = ? and status = 1", category.ID).Order("sort asc").Find(&tmpChannels)
 			channels = append(channels, tmpChannels...)
-		} else {
-			channels = GetAutoChannelList(category, false)
 		}
 	}
 

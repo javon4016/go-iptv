@@ -32,8 +32,8 @@
                     </div>
                     <div class="card-body" style="position: relative;">
                         <p>机器码：{{ .Lic.ID }}</p>
-                        <p>授权状态：{{ if eq .Lic.Tpye 0 }}<font color="red">未授权</font>{{ else if eq .Lic.Tpye 1 }}<font color="#33a996">已授权</font>{{ else if eq .Lic.Tpye 2 }}<font color="#33a996">永久授权</font>{{else}}<font color="red">未授权</font>{{ end }}</p>
-                        <p>过期时间：{{ if eq .Lic.Tpye 2 }}永久授权{{else}}{{ .Lic.ExpStr }}{{ end }}</p>
+                        <p>授权状态：{{ if eq .Lic.Type 0 }}<font color="red">未授权</font>{{ else if eq .Lic.Type 1 }}<font color="#33a996">已授权</font>{{ else if eq .Lic.Type 2 }}<font color="#33a996">永久授权</font>{{else}}<font color="red">未授权</font>{{ end }}</p>
+                        <p>过期时间：{{ if eq .Lic.Type 2 }}永久授权{{else}}{{ .Lic.ExpStr }}{{ end }}</p>
                     </div>
                 </div>
                 <div class="modal fade" id="register" tabindex="-1" role="dialog">
@@ -118,9 +118,9 @@
                     <div class="col-lg-6">
                         <div class="card">
                             <div class="card-header"><h4>中转访问</h4>
-                            {{ if eq .Lic.Tpye 0 }} <span class="badge badge-danger">未授权</span>{{ end }}
+                            {{ if eq .Lic.Type 0 }} <span class="badge badge-danger">未授权</span>{{ end }}
                             </div>
-                            <div class="card-body" {{ if eq .Lic.Tpye 0 }}style="pointer-events: none; opacity: 0.6;"{{ end }}>
+                            <div class="card-body" {{ if eq .Lic.Type 0 }}style="pointer-events: none; opacity: 0.6;"{{ end }}>
                                 <form method="post" action="/admin/license">
                                 <div class="input-group"> 
                                     <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
@@ -153,6 +153,7 @@
                                             <input type="checkbox" name="proxy" onchange="submitFormPOST(this)" {{if eq .Proxy 1}}checked{{end}}/>
                                             <span></span>
                                         </label>
+                                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<label class="btn btn-info btn-xs"  style="margin:0;" onclick="checkProxy()">可用性检测</label>
                                     </div>
                                 </div>
                                 </form>
@@ -162,9 +163,9 @@
                     <div class="col-lg-6">
                         <div class="card">
                             <div class="card-header"><h4>分辨率&&延迟测试</h4>
-                            {{ if eq .Lic.Tpye 0 }} <span class="badge badge-danger">未授权</span>{{ end }}
+                            {{ if eq .Lic.Type 0 }} <span class="badge badge-danger">未授权</span>{{ end }}
                             </div>
-                            <div class="card-body" {{ if eq .Lic.Tpye 0 }}style="pointer-events: none; opacity: 0.6;"{{ end }}>
+                            <div class="card-body" {{ if eq .Lic.Type 0 }}style="pointer-events: none; opacity: 0.6;"{{ end }}>
                                 <form method="post" action="/admin/license">
                                 <div class="form-inline">
                                     <div class="form-group" style="margin-right: 15px;">
@@ -193,9 +194,9 @@
                     <div class="col-lg-6">
                         <div class="card">
                             <div class="card-header"><h4>EPG模糊识别</h4>
-                            {{ if eq .Lic.Tpye 0 }} <span class="badge badge-danger">未授权</span>{{ end }}
+                            {{ if eq .Lic.Type 0 }} <span class="badge badge-danger">未授权</span>{{ end }}
                             </div>
-                            <div class="card-body" {{ if eq .Lic.Tpye 0 }}style="pointer-events: none; opacity: 0.6;"{{ end }}>
+                            <div class="card-body" {{ if eq .Lic.Type 0 }}style="pointer-events: none; opacity: 0.6;"{{ end }}>
                                 <form method="post" action="/admin/license">
                                 <div class="form-inline">
                                     <div class="form-group" style="margin-right: 15px;">
@@ -206,6 +207,27 @@
                                         </label>
                                     </div>
                                     <small class="help-block">提示：频道自动绑定未识别时启用模糊识别，以提升识别成功率。存在识别错误问题，谨慎开启</small>
+                                </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="card">
+                            <div class="card-header"><h4>频道聚合</h4>
+                            {{ if eq .Lic.Type 0 }} <span class="badge badge-danger">未授权</span>{{ end }}
+                            </div>
+                            <div class="card-body" {{ if eq .Lic.Type 0 }}style="pointer-events: none; opacity: 0.6;"{{ end }}>
+                                <form method="post" action="/admin/license">
+                                <div class="form-inline">
+                                    <div class="form-group" style="margin-right: 15px;">
+                                        <label>频道聚合开关:</label>
+                                        <label class="lyear-switch switch-primary">
+                                            <input type="checkbox" id="aggStatus" name="aggStatus" onchange="submitFormPOST(this)" {{ if eq .Proxy 0 }}disabled{{else}}{{if eq .Aggregation 1}}checked{{end}}{{ end }}/>
+                                            <span></span>
+                                        </label>&nbsp;&nbsp;&nbsp;<span style=" color: #000000;">{{ if eq .Proxy 0 }}需要先打开中转访问功能{{ end }}</span>
+                                    </div>
+                                    <small class="help-block">通过编写正则表达式或者勾选EPG，将不同分组的频道聚合到新分组内(需要频道已经绑定了EPG)</small>
                                 </div>
                                 </form>
                             </div>

@@ -146,6 +146,7 @@ func scheduleSave() {
 		if err := SaveConfigToFile(); err != nil {
 			log.Println("保存配置文件失败:", err)
 		} else {
+			go WS.SendWS(Request{Action: "reloadConfig"})
 			log.Println("全局配置已保存到文件")
 			// LoadConfig()
 		}

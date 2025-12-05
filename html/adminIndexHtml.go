@@ -25,9 +25,15 @@ func Index(c *gin.Context) {
 
 	today := time.Now().Truncate(24 * time.Hour).Unix()
 
+	cfg := dao.GetConfig()
+	var query string = "enable = 1 and type not like 'auto%'"
+	if dao.Lic.Type != 0 && cfg.Proxy.Status == 1 && cfg.Aggregation.Status == 1 {
+		query = "enable = 1"
+	}
+
 	dao.DB.Model(&models.IptvUser{}).Count(&pageData.UserTotal)
 	dao.DB.Model(&models.IptvUser{}).Where("lasttime > ?", today).Count(&pageData.UserToday)
-	dao.DB.Model(&models.IptvCategory{}).Where("enable = 1").Count(&pageData.ChannelTypeCount)
+	dao.DB.Model(&models.IptvCategory{}).Where(query).Count(&pageData.ChannelTypeCount)
 	dao.DB.Model(&models.IptvChannel{}).Where("status = 1").Count(&pageData.ChannelCount)
 	dao.DB.Model(&models.IptvEpg{}).Where("status = 1").Count(&pageData.EpgCount)
 	dao.DB.Model(&models.IptvMeals{}).Where("status = 1").Count(&pageData.MealsCount)

@@ -5,7 +5,6 @@ import (
 	"compress/zlib"
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	"go-iptv/dao"
 	"go-iptv/dto"
 	"go-iptv/models"
@@ -134,17 +133,12 @@ func GetChannels(channel dto.DataReqDto) string {
 
 		for _, channel := range until.CaGetChannels(v, false) {
 			if v.Proxy == 1 && cfg.Proxy.Status == 1 {
-				urlMsg := fmt.Sprintf("{\"c\":%d,\"u\":\"%s\"}", v.ID, channel.Url)
-				msg, err := until.UrlEncrypt(dao.Lic.ID, urlMsg)
-				if err == nil {
-					pUrl := fmt.Sprintf("%s:%d/p/%s", cfg.Proxy.PAddr, cfg.Proxy.Port, msg)
-					dataMap[channel.Name] = append(dataMap[channel.Name], strings.TrimSpace(pUrl))
-					if _, ok := tmpMap[channel.Name]; !ok {
-						tmpMap[channel.Name] = i
-						i++
-					}
-					continue
+				dataMap[channel.Name] = append(dataMap[channel.Name], strings.TrimSpace(channel.PUrl))
+				if _, ok := tmpMap[channel.Name]; !ok {
+					tmpMap[channel.Name] = i
+					i++
 				}
+				continue
 			}
 			dataMap[channel.Name] = append(dataMap[channel.Name], strings.TrimSpace(channel.Url))
 			if _, ok := tmpMap[channel.Name]; !ok {
