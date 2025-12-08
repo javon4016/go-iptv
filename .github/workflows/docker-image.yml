@@ -114,28 +114,17 @@ jobs:
           files: iptv_dist/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      
-      - name: Setup Python
-        uses: actions/setup-python@v4
+  repo-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mirror to Gitee
+        uses: Yikun/hub-mirror-action@master
         with:
-          python-version: "3.x"
-
-      - name: Install mirror tool
-        run: |
-          pip install github-to-gitee-mirror
-
-      - name: Sync to Gitee
-        env:
-          GITEE_USERNAME: ${{ secrets.GITEE_USERNAME }}
-          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
-          GITEE_REPO: ${{ vars.GITEE_REPO }}
-        run: |
-          github-to-gitee-mirror \
-            --github-repo ${{ github.repository }} \
-            --gitee-repo $GITEE_REPO \
-            --gitee-user $GITEE_USERNAME \
-            --gitee-token $GITEE_TOKEN \
-            --include-release \
-            --include-tags \
-            --force
-
+          src: github/${{ github.repository }}
+          dst: gitee/${{ secrets.GITEE_REPO }}
+          src-token: ${{ secrets.GITHUB_TOKEN }}
+          dst-token: ${{ secrets.GITEE_TOKEN }}
+          account-type: user
+          force-update: true
+          static-list: "true"
+          include-release: true
