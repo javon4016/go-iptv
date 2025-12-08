@@ -124,4 +124,4 @@ jobs:
           dst_token: ${{ secrets.GITEE_TOKEN }}
           white_list: "${{ github.event.repository.name }}"
           force_update: true
-          account_type: user
+          debug: true
