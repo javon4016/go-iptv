@@ -129,9 +129,9 @@ func BuildAPK() bool {
 	}
 	log.Println("开始编译APK ...")
 
-	if until.IsLowResource() {
+	if until.IsLowResource() || os.Getenv("LOWOS") == "true" {
 		cmd = exec.Command("apktool",
-			"-JXmx256M",
+			"-JXmx128M",
 			"-JXX:+UseParallelGC",
 			"-JXX:+UseStringDeduplication",
 			"-JXX:ParallelGCThreads=2",
