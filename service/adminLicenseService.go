@@ -80,6 +80,13 @@ func Proxy(params url.Values) dto.ReturnJsonDto {
 					go until.CleanAutoCacheAll() // 清理缓存
 					return dto.ReturnJsonDto{Code: 1, Msg: "启动成功，可以到频道分组管理中开启中转啦", Type: "success"}
 				} else {
+					tmpRes := until.GetUrlData("http://127.0.0.1:8080/status")
+					if tmpRes == "ok" {
+						cfg.Proxy.Status = 1
+						dao.SetConfig(cfg)
+						go until.CleanAutoCacheAll() // 清理缓存
+						return dto.ReturnJsonDto{Code: 0, Msg: "启动成功，容器无法访问中转地址 " + scheme + "://" + pAddr + ":" + port + " ,若使用的IPv6地址请访问" + scheme + "://" + pAddr + ":" + port + "/status  返回ok即可忽略该提示", Type: "danger"}
+					}
 					return startError(cfg, errors.New("中转地址 "+scheme+"://"+pAddr+":"+port+" 无法访问,请重新配置地址或端口"))
 				}
 			} else {
