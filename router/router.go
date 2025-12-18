@@ -57,6 +57,13 @@ func InitRouter(debug bool) *gin.Engine {
 	r.Static("/icon", "/config/images/icon")
 	r.Static("/logo", "/config/logo")
 
+	// r.GET("/app/*filepath", func(c *gin.Context) {
+	// 	path := filepath.Join("/config/app", c.Param("filepath"))
+	// 	c.Header("Content-Disposition", "attachment") // 可选，强制下载
+	// 	c.Header("Content-Type", "application/vnd.android.package-archive")
+	// 	c.File(path)
+	// })
+
 	r.Use(func(c *gin.Context) {
 		if !bootstrap.Installed {
 			path := c.Request.URL.Path
@@ -92,18 +99,24 @@ func InitRouter(debug bool) *gin.Engine {
 
 		cfg := dao.GetConfig()
 
-		timeStr, err := until.GetFileModTimeStr("./app/" + cfg.Build.Name + ".apk")
-		if err != nil {
+		timeStr, err := until.GetFileModTimeStr("/config/app/" + cfg.Build.Name + ".apk")
+		if err != nil || until.GetFileSize("/config/app/"+cfg.Build.Name+".apk") == "0 MB" {
 			pageData.ApkTime = "未知"
 		} else {
 			pageData.ApkTime = timeStr
 			pageData.ApkName = cfg.Build.Name + ".apk"
 			pageData.ApkVersion = cfg.Build.Version
-			pageData.ApkSize = until.GetFileSize("./app/" + cfg.Build.Name + ".apk")
+			pageData.ApkSize = until.GetFileSize("/config/app/" + cfg.Build.Name + ".apk")
 			pageData.ApkUrl = "/app/" + cfg.Build.Name + ".apk"
 		}
 
 		pageData.Status = bootstrap.GetBuildStatus()
+
+		if until.GetFileSize("/config/app/"+cfg.MyTV.Name+"-mytv.apk") != "0 MB" {
+			pageData.ShowDownMyTV = true
+			pageData.MyTVName = cfg.MyTV.Name + "-mytv-1.2.0." + cfg.MyTV.Version + ".apk"
+			pageData.MyTVUrl = "/app/" + cfg.MyTV.Name + "-mytv.apk"
+		}
 
 		ua := c.GetHeader("User-Agent")
 		templateName := "index.html" // 默认 PC 模板

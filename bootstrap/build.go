@@ -43,13 +43,13 @@ func BuildAPK() bool {
 
 	clientSource := "/client"
 	outputDir := "/config/app"
-	os.RemoveAll(outputDir)
 
 	timeStamp := fmt.Sprintf("%d", time.Now().Unix())
 	buildBaseDir := fmt.Sprintf("/tmp/build_%s", timeStamp)
 	defer os.RemoveAll(buildBaseDir)
 	buildSourceDir := buildBaseDir + clientSource
 	apkPath := outputDir + "/" + apkName + ".apk"
+	os.RemoveAll(apkPath)
 
 	buildKey := buildBaseDir + "/auto_keystore.jks"
 	keyAlias := "iptvkey"
@@ -164,6 +164,7 @@ func BuildAPK() bool {
 		log.Println("签名出错:", err)
 		return false
 	}
+
 	log.Println("APK编译完成")
 
 	return true

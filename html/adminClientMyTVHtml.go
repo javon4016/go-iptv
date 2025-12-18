@@ -25,7 +25,7 @@ func ClientMyTV(c *gin.Context) {
 		Title:     "MyTV客户端设置",
 		MyTV:      cfg.MyTV,
 		ApkName:   cfg.MyTV.Name + "-mytv.apk",
-		ApkUrl:    "/config/app/" + cfg.MyTV.Name + "-mytv.apk", // APK下载地址
+		ApkUrl:    "/app/" + cfg.MyTV.Name + "-mytv.apk", // APK下载地址
 		UpSize:    until.GetFileSize("/config/app/" + cfg.MyTV.Name + "-mytv.apk"),
 		ServerUrl: cfg.ServerUrl,
 	}

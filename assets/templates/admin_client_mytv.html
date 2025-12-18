@@ -71,7 +71,7 @@
                                     <button class="btn btn-label btn-primary" type="button" onclick="BuildMyTVApk(this)" id="buildMyTV" name="buildMyTV" {{if eq .BuildStatus 1}}disabled{{end}}><label><i class="mdi mdi-checkbox-marked-circle-outline"></i></label>编译APK</button>
                                 </div>
                                 <div class="form-group" >
-                                    <a href="{{ .ApkUrl }}" download="{{ .MyTV.Name }}">
+                                    <a href="{{ .ApkUrl }}" download="{{ .MyTV.Name }}-mytv.apk">
                                         <button class="btn btn-label btn-primary download-link" type="button"
                                                 {{if eq .BuildStatus 1}}disabled{{end}}>
                                             <label><i class="mdi mdi-download"></i></label>下载客户端

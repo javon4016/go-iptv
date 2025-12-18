@@ -29,7 +29,8 @@
                             <span>大小：{{if eq .Status 1}}APK编译中，请稍后...{{else}}{{ .ApkSize }}{{end}}</span> 
                             <span>系统：Android 4.0+</span>
                         </div>
-                        {{if eq .Status 1}}APK编译中，请稍后...{{else}}<a id="downurl" href="{{ .ApkUrl }}" download="{{ .ApkName }}">立即下载</a> {{end}}
+                        {{if eq .Status 1}}APK编译中，请稍后...{{else}}<a id="downurl" href="{{ .ApkUrl }}" download="{{ .ApkName }}">{{ .ApkName }} (骆驼)</a> {{end}}
+                        {{if .ShowDownMyTV }}<p><a id="downurl" href="{{ .MyTVUrl }}" ownload="{{ .MyTVName }}">{{ .MyTVName }}</a></p>{{end}}
                         <p><a id="managementurl" href="/admin" management="{{ SiteName }}">{{ SiteName }}</a></p>
                     </div>
                 </div>
