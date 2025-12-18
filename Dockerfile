@@ -30,7 +30,7 @@ RUN chmod +x iptv license start
 # ================================
 # Final Image
 # ================================
-FROM openjdk:17-jdk-alpine
+FROM alpine:latest
 
 ENV TZ=Asia/Shanghai
 ENV ANDROID_HOME=/opt/android-sdk
