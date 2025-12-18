@@ -8,7 +8,6 @@ type Build struct {
 }
 
 type MyTV struct {
-	Name    string `mapstructure:"name" json:"name" yaml:"name"`
 	Version string `mapstructure:"version" json:"version" yaml:"version"`
 	Update  string `mapstructure:"update" json:"update" yaml:"update"`
 }

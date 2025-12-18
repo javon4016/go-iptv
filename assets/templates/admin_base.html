@@ -14,7 +14,7 @@
 					<ul class="nav nav-drawer">
 						<li class="nav-item active"> <a href="/admin/" id="index"><i class="mdi mdi-home"></i>首页</a> </li>
 						
-						<li class="nav-item"> <a href="/admin/meals" id="meals"><i class="mdi mdi-shopping"></i>订阅管理</a> </li>
+						<li class="nav-item"> <a href="/admin/meals" id="meals"><i class="mdi mdi-shopping"></i>套餐管理</a> </li>
 						<li class="nav-item nav-item-has-subnav sysadmin">
 							<a href="javascript:void(0)"><i class="mdi mdi-settings-box"></i>EPG管理</a>
 							<ul class="nav nav-subnav">
@@ -28,11 +28,10 @@
 							<ul class="nav nav-subnav">
 								<li class=""><a href="/admin/authors" id="authors">客户端授权</a></li>
 								<li class=""><a href="/admin/users" id="user">客户端列表</a></li>
-								<li class=""><a href="/admin/client" id="client">客户端设置</a></li>
+								<li class=""><a href="/admin/client" id="client">骆驼客户端设置</a></li>
 								{{if IsLic }}
 								<li class=""><a href="/admin/clientMyTV" id="clientMyTV">MyTV客户端设置</a></li>
 								{{end}}
-								<li class=""><a href="/admin/movie" id="movie">点播管理</a></li>
 							</ul>
 						</li>
 						<li class="nav-item nav-item-has-subnav sysadmin">
@@ -51,7 +50,7 @@
 				<div class="sidebar-footer" {{ if eq DisPay 1 }}style="height: 60px;"{{ end }}>
 					<p class="copyright" style="text-align: center;">{{ Version }}</p>
 					{{ if eq DisPay 0 }}
-					<p class="copyright" style="text-align: center;"><a href="https://www.qingh.xyz" target="_blank">清和博客</a>&nbsp;&nbsp;<a href="/admin/about#bottom" class="aboutbottom">捐赠作者</a></p>
+					<p class="copyright" style="text-align: center;"><a href="https://www.qingh.xyz" target="_blank">清和博客</a>&nbsp;&nbsp;<a href="/admin/about#bottom" class="aboutbottom">赞助作者</a></p>
 					<p class="copyright" style="text-align: center;"><a target="_blank" href="https://qm.qq.com/cgi-bin/qm/qr?k=pMPxYtnMvSlAL1irmcOzdSZSKhETKebC&jump_from=webapi&authKey=JluAYPajYgxbyuz+T0caZmrtfJbPQUxoZ6tORWtu1teN3PP/rEtu5lFZu+AUG1Bi"><img border="0" src="http://pub.idqqimg.com/wpa/images/group.png" alt="清和iptv" title="清和iptv"></a></p>
 					{{ end }}
 				</div>

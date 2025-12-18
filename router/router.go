@@ -102,13 +102,13 @@ func InitRouter(debug bool) *gin.Engine {
 		if until.GetFileSize("/config/app/"+cfg.Build.Name+".apk") != "0 MB" {
 			pageData.ShowDown = true
 			pageData.ApkName = cfg.Build.Name + "-" + cfg.Build.Version + ".apk"
-			pageData.ApkUrl = "/app/" + cfg.Build.Name + "-" + cfg.Build.Version + ".apk"
+			pageData.ApkUrl = "/app/" + cfg.Build.Name + ".apk"
 		}
 
-		if until.GetFileSize("/config/app/"+cfg.MyTV.Name+"-mytv.apk") != "0 MB" {
+		if until.GetFileSize("/config/app/清和IPTV-mytv.apk") != "0 MB" {
 			pageData.ShowDownMyTV = true
-			pageData.MyTVName = cfg.MyTV.Name + "-mytv-1.2.0." + cfg.MyTV.Version + ".apk"
-			pageData.MyTVUrl = "/app/" + cfg.MyTV.Name + "-mytv.apk"
+			pageData.MyTVName = "清和IPTV-mytv-1.2.0." + cfg.MyTV.Version + ".apk"
+			pageData.MyTVUrl = "/app/清和IPTV-mytv.apk"
 		}
 
 		ua := c.GetHeader("User-Agent")
