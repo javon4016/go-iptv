@@ -79,10 +79,12 @@ COPY static /app/static
 COPY database /app/database
 COPY logo /app/logo
 
-COPY config.yml README.md dictionary.txt alias.json ChangeLog.md Version license start MyTV.apk keystore.p12 /app/
+COPY config.yml README.md dictionary.txt alias.json ChangeLog.md Version MyTV.apk keystore.p12 /app/
 COPY license_all/Version_lic /app/Version_lic
 
 # Go 程序
 COPY --from=builder /app/iptv /app/iptv
+COPY --from=builder /app/license /app/license
+COPY --from=builder /app/start /app/start
 
 CMD ["./start"]
