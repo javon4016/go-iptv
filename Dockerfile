@@ -49,6 +49,7 @@ COPY static database logo /app/
 
 # 基础依赖
 RUN apk add --no-cache \
+    openjdk17 \
     bash \
     curl \
     wget \
