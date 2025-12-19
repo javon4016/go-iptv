@@ -63,7 +63,21 @@ func fetchLatestStableRelease(owner, repo string) (*githubRelease, error) {
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return nil, err
+		url = fmt.Sprintf("https://gh-proxy.org/https://api.github.com/repos/%s/%s/releases", owner, repo)
+		req, _ = http.NewRequestWithContext(ctx, "GET", url, nil)
+		req.Header.Set("Accept", "application/vnd.github.v3+json")
+
+		resp, err = http.DefaultClient.Do(req)
+		if err != nil {
+			url = fmt.Sprintf("https://gh.llkk.cc/https://api.github.com/repos/%s/%s/releases", owner, repo)
+			req, _ = http.NewRequestWithContext(ctx, "GET", url, nil)
+			req.Header.Set("Accept", "application/vnd.github.v3+json")
+
+			resp, err = http.DefaultClient.Do(req)
+			if err != nil {
+				return nil, err
+			}
+		}
 	}
 	defer resp.Body.Close()
 
@@ -81,39 +95,6 @@ func fetchLatestStableRelease(owner, repo string) (*githubRelease, error) {
 			latest = &r
 		}
 	}
-	if latest == nil {
-		return nil, errors.New("无正式版")
-	}
-	return latest, nil
-}
-
-func fetchLatestStableReleaseGitee(owner, repo string) (*githubRelease, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	url := fmt.Sprintf("https://gitee.com/api/v5/repos/%s/%s/releases", owner, repo)
-	req, _ := http.NewRequestWithContext(ctx, "GET", url, nil)
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	var releases []githubRelease
-	if err := json.NewDecoder(resp.Body).Decode(&releases); err != nil {
-		return nil, err
-	}
-
-	var latest *githubRelease
-	for _, r := range releases {
-		if r.Prerelease {
-			continue
-		}
-		if latest == nil || r.CreatedAt.After(latest.CreatedAt) {
-			latest = &r
-		}
-	}
-
 	if latest == nil {
 		return nil, errors.New("无正式版")
 	}
@@ -161,13 +142,8 @@ func CheckNewVerWeb(local string) (bool, string, error) {
 	var latest *githubRelease
 	latest, err := fetchLatestStableRelease("wz1st", "go-iptv")
 	if err != nil {
-		log.Println("Github 检查失败，切换Gitee...")
-		tmp, err1 := fetchLatestStableReleaseGitee("wz1st", "go-iptv")
-		if err1 != nil {
-			log.Println("Gitee 检查失败，请检查网络连接")
-			return false, "", err1
-		}
-		latest = tmp
+		log.Println("连接Github 检查失败，请检查网络连接")
+		return false, "", err
 	}
 
 	isNew, err := isNewer(latest.TagName, local, 4)
@@ -178,13 +154,8 @@ func CheckNewVerLic(local string) (bool, string, error) {
 	var latest *githubRelease
 	latest, err := fetchLatestStableRelease("wz1st", "iptv-license-down")
 	if err != nil {
-		log.Println("Github 检查失败，切换Gitee...")
-		tmp, err1 := fetchLatestStableReleaseGitee("wz1st", "iptv-license-down")
-		if err1 != nil {
-			log.Println("Gitee 检查失败，请检查网络连接")
-			return false, "", err1
-		}
-		latest = tmp
+		log.Println("连接Github 检查失败，请检查网络连接")
+		return false, "", err
 	}
 
 	isNew, err := isNewer(latest.TagName, local, 3)
@@ -226,8 +197,41 @@ func downloadFile(urlStr, dst string) error {
 
 	maxRetries := 3
 	var lastErr error
+	downUrlStr := urlStr
 	for i := 0; i < maxRetries; i++ {
-		resp, err := client.Get(urlStr)
+		resp, err := client.Get(downUrlStr)
+		if err != nil {
+			lastErr = err
+			time.Sleep(time.Second * time.Duration(i+1))
+			continue
+		}
+
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			lastErr = fmt.Errorf("下载失败，状态码: %d", resp.StatusCode)
+			time.Sleep(time.Second * time.Duration(i+1))
+			continue
+		}
+
+		f, err := os.Create(dst)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+
+		_, err = io.Copy(f, resp.Body)
+		if err != nil {
+			lastErr = err
+			time.Sleep(time.Second * time.Duration(i+1))
+			continue
+		}
+
+		return nil // 下载成功
+	}
+
+	downUrlStr = "https://gh.llkk.cc/" + urlStr
+	for i := 0; i < maxRetries; i++ {
+		resp, err := client.Get(downUrlStr)
 		if err != nil {
 			lastErr = err
 			time.Sleep(time.Second * time.Duration(i+1))
@@ -325,13 +329,8 @@ func DownloadAndVerifyWeb(arch string) (bool, string, error) {
 	var rel *githubRelease
 	rel, err := fetchLatestStableRelease("wz1st", "go-iptv")
 	if err != nil {
-		log.Println("Github 获取失败，切换Gitee...")
-		tmp, err1 := fetchLatestStableReleaseGitee("wz1st", "go-iptv")
-		if err1 != nil {
-			log.Println("Gitee 获取失败，请检查网络连接")
-			return false, "", err1
-		}
-		rel = tmp
+		log.Println("连接Github 检查失败，请检查网络连接")
+		return false, "", err
 	}
 
 	downDir := "/tmp/down"
@@ -420,13 +419,8 @@ func DownloadAndVerifyLic(arch string) (bool, string, error) {
 	var rel *githubRelease
 	rel, err := fetchLatestStableRelease("wz1st", "iptv-license-down")
 	if err != nil {
-		log.Println("Github 获取失败，切换Gitee...")
-		tmp, err1 := fetchLatestStableReleaseGitee("wz1st", "iptv-license-down")
-		if err1 != nil {
-			log.Println("Gitee 获取失败，请检查网络连接")
-			return false, "", err1
-		}
-		rel = tmp
+		log.Println("连接Github 检查失败，请检查网络连接")
+		return false, "", err
 	}
 
 	downDir := "/tmp/down"
