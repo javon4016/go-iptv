@@ -3,6 +3,7 @@ package html
 import (
 	"go-iptv/dao"
 	"go-iptv/dto"
+	"go-iptv/service"
 	"go-iptv/until"
 
 	"github.com/gin-gonic/gin"
@@ -21,13 +22,14 @@ func ClientMyTV(c *gin.Context) {
 	}
 
 	var pageData = dto.AdminClientMyTVDto{
-		LoginUser: username,
-		Title:     "MyTV客户端设置",
-		MyTV:      cfg.MyTV,
-		ApkName:   "清和IPTV-mytv.apk",
-		ApkUrl:    "/app/清和IPTV-mytv.apk", // APK下载地址
-		UpSize:    until.GetFileSize("/config/app/清和IPTV-mytv.apk"),
-		ServerUrl: cfg.ServerUrl,
+		LoginUser:   username,
+		Title:       "MyTV客户端设置",
+		MyTV:        cfg.MyTV,
+		ApkName:     "清和IPTV-mytv.apk",
+		ApkUrl:      "/app/清和IPTV-mytv.apk", // APK下载地址
+		UpSize:      until.GetFileSize("/config/app/清和IPTV-mytv.apk"),
+		ServerUrl:   cfg.ServerUrl,
+		BuildStatus: service.BuildStatus,
 	}
 
 	if until.Exists("/config/images/icon/icon.png") {

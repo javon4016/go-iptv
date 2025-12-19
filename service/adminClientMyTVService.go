@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-var buildStatus int64 = 0
+var BuildStatus int64 = 0
 
 func SetMyTVAppInfo(params url.Values) dto.ReturnJsonDto {
 
@@ -70,7 +70,7 @@ func SetMyTVAppInfo(params url.Values) dto.ReturnJsonDto {
 		return dto.ReturnJsonDto{Code: 0, Msg: "连接引擎失败", Type: "danger"}
 	}
 	if res.Code == 1 {
-		buildStatus = 1
+		BuildStatus = 1
 		go waitMyTVBuildReady(cfg)
 		return dto.ReturnJsonDto{Code: 1, Msg: "APK编译中...", Type: "success"}
 	}
@@ -97,13 +97,13 @@ func getMyTVBuildStatus(cfg *dto.Config) bool {
 	} else if res.Code != 1 {
 		return false
 	} else {
-		if err := json.Unmarshal(res.Data, &buildStatus); err != nil {
+		if err := json.Unmarshal(res.Data, &BuildStatus); err != nil {
 			log.Println("⚠️ 无法解析引擎返回的状态:", err)
 			return false
 		}
 	}
 
-	if buildStatus == 0 {
+	if BuildStatus == 0 {
 		dao.SetConfig(cfg)
 		return true
 	}
@@ -111,7 +111,7 @@ func getMyTVBuildStatus(cfg *dto.Config) bool {
 }
 
 func GetMyTVBuildStatus() dto.ReturnJsonDto {
-	if buildStatus == 1 {
+	if BuildStatus == 1 {
 		return dto.ReturnJsonDto{Code: 0, Msg: "APK编译中...", Type: "danger", Data: map[string]interface{}{"size": until.GetFileSize("/config/app/清和IPTV-mytv.apk")}}
 	} else {
 		cfg := dao.GetConfig()
