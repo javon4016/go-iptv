@@ -35,7 +35,6 @@ FROM alpine:latest
 ENV TZ=Asia/Shanghai
 ENV ANDROID_HOME=/opt/android-sdk
 ENV ANDROID_SDK_ROOT=/opt/android-sdk
-ENV PATH=$PATH:/opt/android-sdk/build-tools
 
 
 WORKDIR /app
@@ -72,6 +71,8 @@ RUN apk add --no-cache \
     && mv /tmp/build-tools/android-13/* \
         ${ANDROID_HOME}/build-tools \
     && rm -rf /tmp/build-tools* \
+    && ln -s ${ANDROID_HOME}/build-tools/apksigner /usr/local/bin/apksigner \
+    && ln -s ${ANDROID_HOME}/build-tools/zipalign /usr/local/bin/zipalign \
     && chmod +x /usr/bin/apktool /usr/bin/apktool.jar
 
 COPY config.yml README.md dictionary.txt alias.json ChangeLog.md Version MyTV.apk keystore.p12 /app/
