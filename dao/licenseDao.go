@@ -126,6 +126,15 @@ func (c *WSClient) doConnect() error {
 
 func (c *WSClient) writePump() {
 	for msg := range c.sendChan {
+
+		if !IsRunning() || !c.IsOnline() {
+			select {
+			case msg.errChan <- errors.New("引擎未运行或连接不在线，已丢弃"):
+			default:
+			}
+			continue
+		}
+
 		c.rw.RLock()
 		conn := c.conn
 		closed := c.closed
@@ -188,7 +197,9 @@ func (c *WSClient) heartbeat() {
 				log.Printf("⚠️ 心跳失败 #%d", c.failCount)
 				if c.failCount >= c.failLimit && !c.reconnecting {
 					c.rw.Unlock()
-					c.triggerReconnect()
+					log.Println("⚠️ 引擎存活检测停止 ...")
+					go c.triggerReconnect()
+					return
 				} else {
 					c.rw.Unlock()
 				}
@@ -283,6 +294,14 @@ func (c *WSClient) IsOnline() bool {
 
 func (c *WSClient) SendWS(req Request) (Response, error) {
 	if !IsRunning() {
+		if !c.RestartLic() {
+			return Response{}, fmt.Errorf("引擎重启失败")
+		}
+		if !c.IsOnline() {
+			if err := c.doConnect(); err != nil {
+				return Response{}, fmt.Errorf("引擎未在线")
+			}
+		}
 		return Response{}, fmt.Errorf("引擎未启动")
 	}
 
