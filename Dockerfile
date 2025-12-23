@@ -58,7 +58,6 @@ RUN apk add --no-cache \
     zip \
     ffmpeg \
     sqlite \
-    libwebp-tools \
     libc6-compat \
     libstdc++ \
     tzdata \

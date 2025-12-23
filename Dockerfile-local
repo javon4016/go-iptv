@@ -42,7 +42,6 @@ RUN apk add --no-cache \
     zip \
     ffmpeg \
     sqlite \
-    libwebp-tools \
     libc6-compat \
     libstdc++ \
     tzdata \
@@ -60,8 +59,9 @@ RUN apk add --no-cache \
     && ln -s ${ANDROID_HOME}/build-tools/zipalign /usr/local/bin/zipalign \
     && chmod +x /usr/bin/apktool /usr/bin/apktool.jar
 
-COPY config.yml README.md dictionary.txt alias.json ChangeLog.md Version license_all/license_amd64 start keystore.p12 /app/
+COPY config.yml README.md dictionary.txt alias.json ChangeLog.md Version start keystore.p12 /app/
 COPY license_all/Version_lic /app/Version_lic
+COPY license_all/license_amd64 /app/license
 
 # Go 程序
 COPY --from=builder /app/iptv /app/iptv

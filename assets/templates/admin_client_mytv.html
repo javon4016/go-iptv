@@ -21,30 +21,6 @@
                             </div>
                             <div class="form-inline" style="margin-top: 15px;">
                                 <div class="form-group" style="margin-right: 15px;">
-                                    
-                                    <div style="display: flex; align-items: center; gap: 10px;">
-                                        <label>应用图标:</label>
-                                        <!-- 上传按钮 -->
-                                        <label class="btn btn-primary" style="margin:0;">
-                                            更改图标
-                                            <input type="file" name="iconfile" accept="image/png" onchange="uploadIcon(event)" id="iconInput" style="display:none;">
-                                        </label>
-
-                                        <!-- 预览图 -->
-                                        <div id="iconContainer" style="position:relative; {{if eq .IconUrl ""}}display:none;{{end}}">
-                                            <img id="iconImg" src="{{if .IconUrl }}{{.IconUrl}}{{end}}" alt="预览" style="height:38px; border:1px solid #ccc; border-radius:4px; cursor:pointer;">
-                                            <!-- 删除按钮 -->
-                                            <span id="deleteIconView" onclick="deleteIcon()" style="
-                                                position:absolute; top:-8px; right:-8px;
-                                                background:#f00; color:#fff; border-radius:50%;
-                                                font-size:14px; line-height:16px; width:16px; height:16px;
-                                                text-align:center; cursor:pointer;">×</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="form-inline" style="margin-top: 15px;">
-                                <div class="form-group" style="margin-right: 15px;">
                                     <label>当前版本:{{.BaseVerson}}.</label>
                                     <input class="form-control" type="text" readonly value="{{ .MyTV.Version }}"/>
                                 </div>

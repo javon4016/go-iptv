@@ -26,6 +26,8 @@ channel:
 rss:
     key: ''
 proxy:
+    scheme: http
+    addr: ''
     status: 0
     port: 8080
 resolution:
